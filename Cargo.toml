@@ -14,9 +14,11 @@ include = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arw_brr = "0.1.0"
+arw_brr = {path= "../arw_brr"}
 dirs = "4.0.0"
+reqwest = "0.11.14"
 rusqlite = "0.28.0"
+tokio = "1.25.0"
 
 [dev-dependencies]
 rand = "0.8.5"
