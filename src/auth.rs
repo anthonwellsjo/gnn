@@ -8,6 +8,10 @@ static CLIENT_ID: &str = "a12059d5dd1b97f61fcf";
 #[derive(Deserialize, Debug)]
 struct GHResponse {
     device_code: String,
+    user_code: String,
+    verification_uri: String,
+    expires_in: usize,
+    interval: usize,
 }
 
 pub async fn post() -> Result<(), Error> {
@@ -16,7 +20,7 @@ pub async fn post() -> Result<(), Error> {
     let client = reqwest::Client::new();
     let res: Response = client
         .post("https://github.com/login/device/code")
-        .header("Cookies", "")
+        .header("Accept", "application/json")
         .json(&map)
         .send()
         .await?;
