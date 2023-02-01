@@ -1,11 +1,8 @@
 mod auth;
 
-use auth::post;
+use auth::auth;
 
 #[tokio::main]
 async fn main() {
-    let res = post().await;
-
-    println!("{:?}", res)
-    
+    auth().await;
 }
