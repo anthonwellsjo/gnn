@@ -1,8 +1,10 @@
 mod auth;
 
-use auth::auth;
+use auth::{auth, has_valid_session};
 
 #[tokio::main]
 async fn main() {
-    auth().await;
+    if !has_valid_session().await {
+        auth().await;
+    }
 }

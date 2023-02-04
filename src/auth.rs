@@ -1,6 +1,6 @@
 use arboard::Clipboard;
 use open;
-use reqwest::{self, Error};
+use reqwest::{self, Error, Response};
 use serde::Deserialize;
 use std::{collections::HashMap, thread, time::Duration};
 use tokio::time::{interval, timeout};
@@ -17,10 +17,16 @@ pub struct StepOneResponse {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct StepThreeResponse {
-    access_token: String,
-    token_type: String,
-    scope: String,
+struct StepThreeResponse {
+    access_token: Option<String>,
+    token_type: Option<String>,
+    scope: Option<String>,
+    error_description: Option<String>,
+    error: Option<String>,
+}
+
+pub async fn has_valid_session() -> bool {
+    todo!()
 }
 
 pub async fn auth() -> Result<(), Error> {
@@ -59,18 +65,19 @@ pub async fn step_two(user_code: &str) {
 }
 
 // /// Poll GitHub to check if the user authorized the device
-pub async fn step_three(res: &StepOneResponse) -> Result<StepThreeResponse, Error> {
+pub async fn step_three(res: &StepOneResponse) -> Result<String, Error> {
     println!("Waiting for authentication...");
-    thread::sleep(Duration::from_secs(3));
+    thread::sleep(Duration::from_secs(2));
     let mut json = HashMap::new();
     json.insert("client_id", CLIENT_ID);
     json.insert("device_code", &res.device_code);
     json.insert("grant_type", "urn:ietf:params:oauth:grant-type:device_code");
 
-    let mut interval = interval(Duration::from_secs(5));
-    let client = reqwest::Client::new();
+    let mut interval = interval(Duration::from_secs(6));
+    let mut client;
     loop {
         println!("call");
+        client = reqwest::Client::new();
 
         let res = client
             .post("https://github.com/login/oauth/access_token")
@@ -79,20 +86,18 @@ pub async fn step_three(res: &StepOneResponse) -> Result<StepThreeResponse, Erro
             .send()
             .await?
             .json::<StepThreeResponse>()
-            .await;
+            .await?;
 
-        println!("{:?}", res);
-
-        match res {
-            Ok(res) => {
-                println!("token: {:?}", res);
-                return Ok(res);
-            }
-            Err(err) => {
-                println!("error {:?}", err)
-            }
+        if let Some(err) = &res.error {
+            println!("{:?}", err);
         }
 
+        if let Some(ref _token) = res.access_token {
+            return Ok(res.access_token.unwrap());
+        }
+
+        println!("end of loop, waiting");
+        interval.tick().await;
         interval.tick().await;
     }
 }
