@@ -1,9 +1,12 @@
+use crate::db::AuthSession;
+
+use super::db::Auth;
 use arboard::Clipboard;
 use open;
-use reqwest::{self, Error, Response};
+use reqwest::{self, Error};
 use serde::Deserialize;
 use std::{collections::HashMap, thread, time::Duration};
-use tokio::time::{interval, timeout};
+use tokio::time::interval;
 
 static CLIENT_ID: &str = "a12059d5dd1b97f61fcf";
 
@@ -26,16 +29,20 @@ struct StepThreeResponse {
 }
 
 pub async fn has_valid_session() -> bool {
-    todo!()
+    let latest_auth = Auth::get_latest();
+    println!("{:?}", latest_auth);
+    false
 }
 
-pub async fn auth() -> Result<(), Error> {
+pub async fn authenticate() -> Result<(), Error> {
     let res = step_one().await?;
     step_two(&res.user_code).await;
+    let session = step_three(&res).await?;
 
-    step_three(&res).await?;
-
-    Ok(())
+    match Auth::save_token(session){
+        Ok(_) => return Ok(()),
+        Err(err) => todo!()
+    }
 }
 
 ///App requests the device and user verification codes from GitHub
@@ -65,7 +72,7 @@ pub async fn step_two(user_code: &str) {
 }
 
 // /// Poll GitHub to check if the user authorized the device
-pub async fn step_three(res: &StepOneResponse) -> Result<String, Error> {
+pub async fn step_three(res: &StepOneResponse) -> Result<AuthSession, Error> {
     println!("Waiting for authentication...");
     thread::sleep(Duration::from_secs(2));
     let mut json = HashMap::new();
@@ -92,8 +99,14 @@ pub async fn step_three(res: &StepOneResponse) -> Result<String, Error> {
             println!("{:?}", err);
         }
 
-        if let Some(ref _token) = res.access_token {
-            return Ok(res.access_token.unwrap());
+        if let Some(ref error_description) = res.error_description {
+            println!("{}", error_description);
+        } else {
+            return Ok(AuthSession {
+                access_token: res.access_token,
+                token_type: res.token_type,
+                scope: res.scope,
+            });
         }
 
         println!("end of loop, waiting");
