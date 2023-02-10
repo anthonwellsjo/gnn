@@ -1,13 +1,13 @@
-mod auth;
 mod db;
 mod app;
+mod models;
 
-use auth::{authenticate, has_valid_session};
+use app::auth::{authenticate, has_valid_session};
 
 #[tokio::main]
 async fn main() {
     if !has_valid_session().await {
-        authenticate().await.unwrap();
+        authenticate().await;
     }
 
     let action = arw_brr::get_argument_at(0).unwrap();

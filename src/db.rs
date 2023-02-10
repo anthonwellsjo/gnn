@@ -53,7 +53,7 @@ impl Auth {
     }
 
     /// Gets the latest used token
-    pub fn get_latest() -> Result<Option<AuthSession>> {
+    pub fn get_last_session() -> Result<Option<AuthSession>> {
         let conn = Self::get_db_connection()?;
 
         let mut stmt = conn.prepare(
@@ -70,7 +70,12 @@ impl Auth {
             })
         })?;
 
-        let auth = Ok(Some(auth_map.into_iter().next().unwrap()?));
-        auth
+        let auth = auth_map.into_iter().next().unwrap()?;
+
+        //If no token, return none
+        if auth.access_token.is_none() {
+            return Ok(None)
+        }
+        Ok(Some(auth))
     }
 }

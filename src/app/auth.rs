@@ -1,11 +1,10 @@
-use crate::db::AuthSession;
+use crate::db::{AuthSession, self};
 
-use super::db::Auth;
 use arboard::Clipboard;
 use open;
-use reqwest::{self, Error};
+use reqwest::{self, header::HeaderMap};
 use serde::Deserialize;
-use std::{collections::HashMap, thread, time::Duration};
+use std::{collections::HashMap, thread, time::Duration, error::Error};
 use tokio::time::interval;
 
 static CLIENT_ID: &str = "a12059d5dd1b97f61fcf";
@@ -29,24 +28,73 @@ struct StepThreeResponse {
 }
 
 pub async fn has_valid_session() -> bool {
-    let latest_auth = Auth::get_latest();
-    println!("{:?}", latest_auth);
-    false
+    let session = match db::Auth::get_last_session() {
+        Ok(it) => it,
+        Err(err) => {panic!("Error while getting last session: {}", err)},
+    };
+    println!("validate");
+    let res = validate_session(session).await;
+    match res {
+        Ok(validation) => validation,
+        Err(err) => {panic!("{}", err)},
+    }
 }
 
-pub async fn authenticate() -> Result<(), Error> {
+#[derive(Deserialize, Debug)]
+struct ValRes{
+    message: Option<String>
+}
+
+async fn validate_session(session: Option<AuthSession>) -> Result<bool, reqwest::Error> {
+
+    let access_token = match session {
+        Some(s) => s.access_token.unwrap(),
+        None => {return Ok(false);},
+    };
+
+
+    println!("gonna api {:?}", access_token);
+
+    println!("{:?}", &access_token);
+    let res = reqwest::Client::new()
+        .get("https://api.github.com/user")
+        .header("Accept", "application/json")
+        .header("Authorization", "Bearer ".to_owned() + &access_token)
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await;
+
+
+    println!("got here");
+
+    println!("result: {:?}",res);
+    // let res = match res{
+    //     Ok(res) => res,
+    //     Err(err) => {panic!("{}", err)},
+    // };
+    //     
+    // match res {
+    //     Ok(res) => println!("{:?}",res),
+    //     Err(err) => println!("{}",err),
+    // }
+    return Ok(true);
+
+}
+
+pub async fn authenticate() -> Result<(), reqwest::Error> {
     let res = step_one().await?;
     step_two(&res.user_code).await;
     let session = step_three(&res).await?;
 
-    match Auth::save_token(session){
+    match db::Auth::save_token(session){
         Ok(_) => return Ok(()),
         Err(err) => todo!()
     }
 }
 
 ///App requests the device and user verification codes from GitHub
-pub async fn step_one() -> Result<StepOneResponse, Error> {
+pub async fn step_one() -> Result<StepOneResponse, reqwest::Error> {
     let mut json = HashMap::new();
     json.insert("client_id", CLIENT_ID);
     reqwest::Client::new()
@@ -61,8 +109,9 @@ pub async fn step_one() -> Result<StepOneResponse, Error> {
 
 ///Prompt the user to enter the user code in a browser
 pub async fn step_two(user_code: &str) {
-    println!("This is your code: {:?}", user_code);
-    println!("It's been copied to your clipboard. Paste it in the browser window opening.");
+    println!("Please log in first.");
+    println!("{:?}", user_code);
+    println!("The cod above has been copied to your clipboard. Paste it in the browser window opening.");
 
     thread::sleep(Duration::from_secs(2));
 
@@ -72,7 +121,7 @@ pub async fn step_two(user_code: &str) {
 }
 
 // /// Poll GitHub to check if the user authorized the device
-pub async fn step_three(res: &StepOneResponse) -> Result<AuthSession, Error> {
+pub async fn step_three(res: &StepOneResponse) -> Result<AuthSession, reqwest::Error> {
     println!("Waiting for authentication...");
     thread::sleep(Duration::from_secs(2));
     let mut json = HashMap::new();

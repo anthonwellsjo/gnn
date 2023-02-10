@@ -1,7 +1,10 @@
-use crate::auth::has_valid_session;
+mod setup;
+pub mod auth;
+use auth::has_valid_session;
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
+    Setup,
     Help,
     Version,
 }
@@ -60,6 +63,9 @@ impl Session {
             Some(Action::Version) => {
                 self.show_version();
             }
+            Some(Action::Setup) => {
+                self.setup();
+            }
             None => {
                 self.action_responses.push(ActionResponse {
                     message: "no action?".to_string(),
@@ -68,6 +74,11 @@ impl Session {
                 });
             }
         }
+    }
+
+    fn setup(&self) {
+        let user = setup::get_user();       
+        todo!()
     }
 
     fn show_version(&mut self) {
@@ -97,4 +108,5 @@ h, help         -                   what you are doing now
             content_type: None,
         });
     }
+
 }
