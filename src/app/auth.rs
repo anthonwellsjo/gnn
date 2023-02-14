@@ -1,10 +1,10 @@
-use crate::db::{AuthSession, self};
+use crate::db::{self, AuthSession};
 
 use arboard::Clipboard;
 use open;
-use reqwest::{self, header::HeaderMap};
+use reqwest::{self, header::HeaderMap, StatusCode};
 use serde::Deserialize;
-use std::{collections::HashMap, thread, time::Duration, error::Error};
+use std::{collections::HashMap, error::Error, thread, time::Duration};
 use tokio::time::interval;
 
 static CLIENT_ID: &str = "a12059d5dd1b97f61fcf";
@@ -30,56 +30,42 @@ struct StepThreeResponse {
 pub async fn has_valid_session() -> bool {
     let session = match db::Auth::get_last_session() {
         Ok(it) => it,
-        Err(err) => {panic!("Error while getting last session: {}", err)},
+        Err(err) => {
+            panic!("Error while getting last session: {}", err)
+        }
     };
     println!("validate");
     let res = validate_session(session).await;
     match res {
         Ok(validation) => validation,
-        Err(err) => {panic!("{}", err)},
+        Err(err) => {
+            panic!("{}", err)
+        }
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct ValRes{
-    message: Option<String>
-}
-
 async fn validate_session(session: Option<AuthSession>) -> Result<bool, reqwest::Error> {
-
     let access_token = match session {
         Some(s) => s.access_token.unwrap(),
-        None => {return Ok(false);},
+        None => {
+            return Ok(false);
+        }
     };
-
 
     println!("gonna api {:?}", access_token);
 
     println!("{:?}", &access_token);
     let res = reqwest::Client::new()
         .get("https://api.github.com/user")
-        .header("Accept", "application/json")
         .header("Authorization", "Bearer ".to_owned() + &access_token)
         .send()
-        .await?
-        .json::<serde_json::Value>()
-        .await;
+        .await?;
 
-
-    println!("got here");
-
-    println!("result: {:?}",res);
-    // let res = match res{
-    //     Ok(res) => res,
-    //     Err(err) => {panic!("{}", err)},
-    // };
-    //     
-    // match res {
-    //     Ok(res) => println!("{:?}",res),
-    //     Err(err) => println!("{}",err),
-    // }
-    return Ok(true);
-
+    println!("{}", res.status());
+    match res.status() {
+        StatusCode::OK | StatusCode::FOUND => return Ok(true),
+        StatusCode => return Ok(false)
+    }
 }
 
 pub async fn authenticate() -> Result<(), reqwest::Error> {
@@ -87,9 +73,9 @@ pub async fn authenticate() -> Result<(), reqwest::Error> {
     step_two(&res.user_code).await;
     let session = step_three(&res).await?;
 
-    match db::Auth::save_token(session){
+    match db::Auth::save_token(session) {
         Ok(_) => return Ok(()),
-        Err(err) => todo!()
+        Err(err) => todo!(),
     }
 }
 
@@ -111,7 +97,9 @@ pub async fn step_one() -> Result<StepOneResponse, reqwest::Error> {
 pub async fn step_two(user_code: &str) {
     println!("Please log in first.");
     println!("{:?}", user_code);
-    println!("The cod above has been copied to your clipboard. Paste it in the browser window opening.");
+    println!(
+        "The cod above has been copied to your clipboard. Paste it in the browser window opening."
+    );
 
     thread::sleep(Duration::from_secs(2));
 
