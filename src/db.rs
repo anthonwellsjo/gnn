@@ -5,12 +5,11 @@ use rusqlite::{Connection, Result};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub struct AuthRequest<'a> {
-    pub access_token: Option<&'a str>,
-    pub token_type: Option<&'a str>,
-    pub scope: Option<&'a str>,
+pub struct AuthRequest {
+    pub access_token: Option<String>,
+    pub token_type: Option<String>,
+    pub scope: Option<String>,
 }
-
 
 /// All db methonds for related to authentication
 pub struct Auth;

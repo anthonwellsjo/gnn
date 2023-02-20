@@ -1,18 +1,18 @@
 mod setup;
 pub mod auth;
-use auth::has_valid_session;
+use auth::token_is_valid;
 
-use crate::db::AuthRequest;
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
-    Setup,
+    Init,
     Help,
     Version,
 }
 impl Action {
     pub fn from_string(s: &str) -> Option<Action> {
         match s {
+            "s" | "setup" => Some(Action::Init),
             "h" | "help" => Some(Action::Help),
             "v" | "version" => Some(Action::Version),
             _ => None,
@@ -41,19 +41,19 @@ pub enum ActionResponseType {
 }
 pub struct Session {
     pub action_responses: Vec<ActionResponse>,
-    pub auth_session: AuthRequest
+    pub token: String
 }
 
 impl Session {
-    pub fn new(auth: AuthRequest) -> Self {
+    pub fn new(token: String) -> Self {
         Session {
             action_responses: vec![],
-            auth_session: auth
+            token
         }
     }
 
     pub async fn run(&mut self, action: Option<Action>, argument: Option<String>) {
-        if !has_valid_session().await {
+        if !token_is_valid(&self.token).await {
             self.action_responses.push(ActionResponse {
                 message: "you are not authenticated".to_string(),
                 res_type: ActionResponseType::Error,
@@ -61,14 +61,17 @@ impl Session {
             });
         }
         match action {
+            Some(Action::Init) => {
+                self.init().await;
+            }
             Some(Action::Help) => {
                 self.show_help();
             }
             Some(Action::Version) => {
                 self.show_version();
             }
-            Some(Action::Setup) => {
-                self.setup();
+            Some(Action::Init) => {
+                self.init();
             }
             None => {
                 self.action_responses.push(ActionResponse {
@@ -80,9 +83,10 @@ impl Session {
         }
     }
 
-    fn setup(&self) {
-        let user = setup::get_user(&self);       
-        todo!()
+    async fn init(&mut self) {
+        print!("init");
+        let user = setup::get_user(self).await;       
+        print!("user is {:?}", user);
     }
 
     fn show_version(&mut self) {

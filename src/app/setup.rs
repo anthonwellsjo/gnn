@@ -5,7 +5,7 @@ use crate::db::AuthRequest;
 use super::{ActionResponse, Session};
 
 #[derive(Deserialize, Debug)]
-struct User{
+pub struct User{
   name: String,
   email: String,
   login: String,
@@ -19,7 +19,7 @@ struct User{
 }
 
 pub async fn get_user(session: &mut Session) -> Option<User> {
-    let access_token = session.auth_session.access_token.unwrap();
+    let access_token = &session.token;
 
     let client = reqwest::Client::builder().user_agent("curl").build().unwrap();
 

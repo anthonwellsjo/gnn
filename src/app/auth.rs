@@ -2,9 +2,9 @@ use crate::db::{self, AuthRequest};
 
 use arboard::Clipboard;
 use open;
-use reqwest::{self, header::HeaderMap, StatusCode};
+use reqwest::{self, StatusCode};
 use serde::Deserialize;
-use std::{collections::HashMap, error::Error, thread, time::Duration};
+use std::{collections::HashMap, thread, time::Duration};
 use tokio::time::interval;
 
 static CLIENT_ID: &str = "a12059d5dd1b97f61fcf";
@@ -27,14 +27,8 @@ struct StepThreeResponse {
     error: Option<String>,
 }
 
-pub async fn has_valid_session() -> bool {
-    let session = match db::Auth::get_last_session() {
-        Ok(it) => it,
-        Err(err) => {
-            panic!("Error while getting last session: {}", err)
-        }
-    };
-    let res = validate_session(session).await;
+pub async fn token_is_valid(token: &str) -> bool {
+    let res = validate_session(token).await;
     match res {
         Ok(validation) => validation,
         Err(err) => {
@@ -43,21 +37,27 @@ pub async fn has_valid_session() -> bool {
     }
 }
 
-async fn validate_session(session: Option<AuthRequest>) -> Result<bool, reqwest::Error> {
-    let access_token = match session {
-        Some(s) => s.access_token.unwrap(),
-        None => {
-            return Ok(false);
+pub async fn create_session() -> AuthRequest {
+    let last_session = match db::Auth::get_last_session() {
+        Ok(it) => it,
+        Err(err) => {
+            panic!("Error while getting last session: {}", err)
         }
     };
 
-    let client = reqwest::Client::builder()
-    .user_agent("curl")
-    .build()?;
+    if !token_is_valid(&last_session.unwrap().access_token.unwrap()).await {
+        authenticate().await;
+    }
+
+    db::Auth::get_last_session().unwrap().unwrap()
+} 
+
+async fn validate_session(token: &str) -> Result<bool, reqwest::Error> {
+    let client = reqwest::Client::builder().user_agent("curl").build()?;
 
     let res = client
         .get("https://api.github.com/user")
-        .bearer_auth(&access_token)
+        .bearer_auth(&token)
         .send()
         .await?;
 
@@ -67,15 +67,17 @@ async fn validate_session(session: Option<AuthRequest>) -> Result<bool, reqwest:
     }
 }
 
-pub async fn authenticate() -> Result<(), reqwest::Error> {
+pub async fn authenticate() -> Result<AuthRequest, reqwest::Error> {
     let res = step_one().await?;
     step_two(&res.user_code).await;
     let session = step_three(&res).await?;
 
-    match db::Auth::save_token(session) {
-        Ok(_) => return Ok(()),
-        Err(err) => todo!(),
-    }
+    let res = match db::Auth::save_token(session) {
+        Ok(session) => Ok(session),
+        Err(err) => todo!()
+    };
+
+    res
 }
 
 ///App requests the device and user verification codes from GitHub
