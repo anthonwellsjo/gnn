@@ -1,4 +1,4 @@
-use crate::db::{self, AuthSession};
+use crate::db::{self, AuthRequest};
 
 use arboard::Clipboard;
 use open;
@@ -34,7 +34,6 @@ pub async fn has_valid_session() -> bool {
             panic!("Error while getting last session: {}", err)
         }
     };
-    println!("validate");
     let res = validate_session(session).await;
     match res {
         Ok(validation) => validation,
@@ -44,7 +43,7 @@ pub async fn has_valid_session() -> bool {
     }
 }
 
-async fn validate_session(session: Option<AuthSession>) -> Result<bool, reqwest::Error> {
+async fn validate_session(session: Option<AuthRequest>) -> Result<bool, reqwest::Error> {
     let access_token = match session {
         Some(s) => s.access_token.unwrap(),
         None => {
@@ -52,19 +51,19 @@ async fn validate_session(session: Option<AuthSession>) -> Result<bool, reqwest:
         }
     };
 
-    println!("gonna api {:?}", access_token);
+    let client = reqwest::Client::builder()
+    .user_agent("curl")
+    .build()?;
 
-    println!("{:?}", &access_token);
-    let res = reqwest::Client::new()
+    let res = client
         .get("https://api.github.com/user")
-        .header("Authorization", "Bearer ".to_owned() + &access_token)
+        .bearer_auth(&access_token)
         .send()
         .await?;
 
-    println!("{}", res.status());
     match res.status() {
         StatusCode::OK | StatusCode::FOUND => return Ok(true),
-        StatusCode => return Ok(false)
+        _ => return Ok(false),
     }
 }
 
@@ -109,7 +108,7 @@ pub async fn step_two(user_code: &str) {
 }
 
 // /// Poll GitHub to check if the user authorized the device
-pub async fn step_three(res: &StepOneResponse) -> Result<AuthSession, reqwest::Error> {
+pub async fn step_three(res: &StepOneResponse) -> Result<AuthRequest, reqwest::Error> {
     println!("Waiting for authentication...");
     thread::sleep(Duration::from_secs(2));
     let mut json = HashMap::new();
@@ -139,7 +138,7 @@ pub async fn step_three(res: &StepOneResponse) -> Result<AuthSession, reqwest::E
         if let Some(ref error_description) = res.error_description {
             println!("{}", error_description);
         } else {
-            return Ok(AuthSession {
+            return Ok(AuthRequest {
                 access_token: res.access_token,
                 token_type: res.token_type,
                 scope: res.scope,

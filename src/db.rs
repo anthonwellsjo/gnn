@@ -5,17 +5,18 @@ use rusqlite::{Connection, Result};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub struct AuthSession {
-    pub access_token: Option<String>,
-    pub token_type: Option<String>,
-    pub scope: Option<String>,
+pub struct AuthRequest<'a> {
+    pub access_token: Option<&'a str>,
+    pub token_type: Option<&'a str>,
+    pub scope: Option<&'a str>,
 }
+
 
 /// All db methonds for related to authentication
 pub struct Auth;
 
 impl Auth {
-    pub fn save_token(session: AuthSession) -> Result<AuthSession> {
+    pub fn save_token(session: AuthRequest) -> Result<AuthRequest> {
         println!("save token");
 
         let conn = Self::get_db_connection()?;
@@ -53,7 +54,7 @@ impl Auth {
     }
 
     /// Gets the latest used token
-    pub fn get_last_session() -> Result<Option<AuthSession>> {
+    pub fn get_last_session() -> Result<Option<AuthRequest>> {
         let conn = Self::get_db_connection()?;
 
         let mut stmt = conn.prepare(
@@ -63,7 +64,7 @@ impl Auth {
         )?;
 
         let auth_map = stmt.query_map([], |row| {
-            Ok(AuthSession {
+            Ok(AuthRequest {
                 access_token: row.get(0)?,
                 token_type: row.get(1)?,
                 scope: row.get(2)?,

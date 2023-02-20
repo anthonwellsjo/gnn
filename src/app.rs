@@ -2,6 +2,8 @@ mod setup;
 pub mod auth;
 use auth::has_valid_session;
 
+use crate::db::AuthRequest;
+
 #[derive(Debug, PartialEq)]
 pub enum Action {
     Setup,
@@ -39,12 +41,14 @@ pub enum ActionResponseType {
 }
 pub struct Session {
     pub action_responses: Vec<ActionResponse>,
+    pub auth_session: AuthRequest
 }
 
 impl Session {
-    pub fn new() -> Self {
+    pub fn new(auth: AuthRequest) -> Self {
         Session {
             action_responses: vec![],
+            auth_session: auth
         }
     }
 
@@ -77,7 +81,7 @@ impl Session {
     }
 
     fn setup(&self) {
-        let user = setup::get_user();       
+        let user = setup::get_user(&self);       
         todo!()
     }
 
