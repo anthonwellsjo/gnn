@@ -1,22 +1,9 @@
 use serde::Deserialize;
 
-use crate::db::AuthRequest;
+use crate::db::{AuthRequest, User};
 
 use super::{ActionResponse, Session};
 
-#[derive(Deserialize, Debug)]
-pub struct User{
-  name: String,
-  email: String,
-  login: String,
-  avatar_url: String,
-  html_url: String,
-  subscriptions_url: String,
-  organizations_url: String,
-  repos_url: String,
-  events_url: String,
-  received_events_url: String
-}
 
 pub async fn get_user(session: &mut Session) -> Option<User> {
     let access_token = &session.token;
@@ -25,8 +12,8 @@ pub async fn get_user(session: &mut Session) -> Option<User> {
 
     let res = client
         .get("https://api.github.com/user")
-        .bearer_auth(&access_token)
         .header("Accept", "application/json")
+        .bearer_auth(&access_token)
         .send()
         .await;
 
@@ -41,6 +28,9 @@ pub async fn get_user(session: &mut Session) -> Option<User> {
             None
         }
     };
-
     res
+}
+
+pub async fn get_notifications(session: &mut Session) -> Option<Vec<Notification>> {
+
 }

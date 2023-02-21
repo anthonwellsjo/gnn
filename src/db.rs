@@ -34,7 +34,7 @@ impl Auth {
     ///  Gets connection to DB. This function will create a new DB if
     ///  not already present
     pub fn get_db_connection() -> Result<Connection> {
-    println!("get db connection");
+        println!("get db connection");
 
         let conn = Connection::open(get_app_path("gnn"))?;
         conn.execute(
@@ -47,9 +47,7 @@ impl Auth {
          )",
             [],
         )?;
-        println!("got it");
         Ok(conn)
-
     }
 
     /// Gets the latest used token
@@ -74,8 +72,98 @@ impl Auth {
 
         //If no token, return none
         if auth.access_token.is_none() {
-            return Ok(None)
+            return Ok(None);
         }
         Ok(Some(auth))
     }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct User {
+    name: Option<String>,
+    login: Option<String>,
+    avatar_url: Option<String>,
+    html_url: Option<String>,
+    subscriptions_url: Option<String>,
+    organizations_url: Option<String>,
+    repos_url: Option<String>,
+    events_url: Option<String>,
+    received_events_url: Option<String>,
+}
+
+impl User {
+    pub fn save(user: &Self) -> Result<()> {
+        println!("save token");
+
+        let conn = Self::get_db_connection()?;
+
+        conn.execute(
+            "INSERT INTO users (name, login, avatar_url, html_url, subscriptions_url, organizations_url, repos_url, events_url, received_events_url) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            &[&user.name, &user.login, &user.avatar_url, &user.html_url, &user.subscriptions_url, &user.organizations_url, &user.repos_url, &user.events_url, &user.received_events_url],
+        )?;
+
+        conn.close()
+            .unwrap_or_else(|_| panic!("Panicking while closing conection."));
+
+        Ok(())
+    }
+
+    ///  Gets connection to DB. This function will create a new DB if
+    ///  not already present
+    pub fn get_db_connection() -> Result<Connection> {
+        println!("get db connection");
+
+        let conn = Connection::open(get_app_path("gnn"))?;
+        conn.execute(
+           "CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            name TEXT,
+            login TEXT,
+            avatar_url TEXT,
+            html_url: TEXT,
+            subscriptions_url: TEXT,
+            organizations_url: TEXT,
+            repos_url: TEXT,
+            events_url: TEXT,
+            received_events_url: TEXT
+         )",
+            [],
+        )?;
+        Ok(conn)
+    }
+}
+
+
+pub struct Repository{
+      id: Option<i64>,
+      name: Option<String>,
+      owner: User,
+      private: Option<bool>,
+      html_url: Option<String>,
+      description: Option<String>,
+      fork: Option<bool>,
+      url: Option<String>
+}
+
+pub struct NotificationSubject{      "title": "Greetings",
+      url: Option<String>,
+      latest_comment_url: Option<String>,
+      r#type: Option<String>
+}
+
+pub struct Notification{
+    repository: Repository,
+    subject: {
+    },
+    "reason": "subscribed",
+    "unread": true,
+    "updated_at": "2014-11-07T22:01:45Z",
+    "last_read_at": "2014-11-07T22:01:45Z",
+    "url": "https://api.github.com/notifications/threads/1",
+    "subscription_url": "https://api.github.com/notifications/threads/1/subscription"
+
+}
+
+impl Notification {
 }

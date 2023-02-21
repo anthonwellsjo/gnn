@@ -1,6 +1,8 @@
-mod setup;
+mod misc;
 pub mod auth;
 use auth::token_is_valid;
+
+use crate::db;
 
 
 #[derive(Debug, PartialEq)]
@@ -8,11 +10,13 @@ pub enum Action {
     Init,
     Help,
     Version,
+    GetNotifications,
 }
 impl Action {
     pub fn from_string(s: &str) -> Option<Action> {
         match s {
-            "s" | "setup" => Some(Action::Init),
+            "i" | "init" => Some(Action::Init),
+            "gn" | "get-notifications" => Some(Action::GetNotifications),
             "h" | "help" => Some(Action::Help),
             "v" | "version" => Some(Action::Version),
             _ => None,
@@ -70,8 +74,8 @@ impl Session {
             Some(Action::Version) => {
                 self.show_version();
             }
-            Some(Action::Init) => {
-                self.init();
+            Some(Action::GetNotifications) => {
+                self.get_notifications();
             }
             None => {
                 self.action_responses.push(ActionResponse {
@@ -85,8 +89,19 @@ impl Session {
 
     async fn init(&mut self) {
         print!("init");
-        let user = setup::get_user(self).await;       
-        print!("user is {:?}", user);
+        match misc::get_user(self).await {
+            Some(user) => {
+                db::User::save(&user);
+                self.action_responses.push(ActionResponse { message: "User set successfully.".to_owned(), res_type: ActionResponseType::Success, content_type: None })
+            },
+            None => {
+                self.action_responses.push(ActionResponse { message: "No user found.".to_owned(), res_type: ActionResponseType::Error, content_type: None })
+            },
+        }
+    }
+
+    fn get_notifications(&self){
+        todo!()
     }
 
     fn show_version(&mut self) {
@@ -102,13 +117,8 @@ impl Session {
             message: "
 command:        argument:
 
-start           -                   start crl daemon
-s, set          crl id              sets crl to os clipboard
-health          -                   check daemon health
-k, kill         -                   kill crl daemon
-l, list         -, limit            lists crls 
-c, clean        -                   deletes all crl
-g, get          query               queries crls and lists them
+i, init         -                   initialize
+v, version      -                   current version
 h, help         -                   what you are doing now
             "
             .to_string(),
@@ -116,5 +126,4 @@ h, help         -                   what you are doing now
             content_type: None,
         });
     }
-
 }
