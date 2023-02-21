@@ -1,4 +1,5 @@
-use std::error::Error;
+use core::fmt;
+use std::{error::Error, str::FromStr};
 
 use arw_brr::get_app_path;
 use rusqlite::{Connection, Result};
@@ -115,7 +116,7 @@ impl User {
 
         let conn = Connection::open(get_app_path("gnn"))?;
         conn.execute(
-           "CREATE TABLE IF NOT EXISTS users (
+            "CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             name TEXT,
@@ -134,36 +135,54 @@ impl User {
     }
 }
 
-
-pub struct Repository{
-      id: Option<i64>,
-      name: Option<String>,
-      owner: User,
-      private: Option<bool>,
-      html_url: Option<String>,
-      description: Option<String>,
-      fork: Option<bool>,
-      url: Option<String>
+fn get_notification_reason(s: &str) -> String {
+    match s{
+            "assign" => "You were assigned to the issue.".to_owned(),
+            "author" => "You created the thread.".to_owned(),
+            "comment" => "You commented on the thread.".to_owned(),
+            "ci_activity" => "A GitHub Actions workflow run that you triggered was completed.".to_owned(), 
+            "invitation" => "You accepted an invitation to contribute to the repository.".to_owned(),
+            "manual" => "You subscribed to the thread (via an issue or pull request).".to_owned(),
+            "mention" => "You were specifically @mentioned in the content.".to_owned(),
+            "review_requested" => "You, or a team you're a member of, were requested to review a pull request.".to_owned(),
+            "security_alert" => "GitHub discovered a security vulnerability in your repository.".to_owned(),
+            "state_change" => "You changed the thread state (for example, closing an issue or merging a pull request).".to_owned(),
+            "subscribed" => "You're watching the repository.".to_owned(),
+            "team_mention" => "You were on a team that was mentioned.".to_owned(),
+            &_ => "Unregistered reason".to_owned()
+        }
 }
 
-pub struct NotificationSubject{      "title": "Greetings",
-      url: Option<String>,
-      latest_comment_url: Option<String>,
-      r#type: Option<String>
+#[derive(Deserialize, Debug)]
+pub struct Repository {
+    id: Option<i64>,
+    name: Option<String>,
+    owner: Option<User>,
+    private: Option<bool>,
+    html_url: Option<String>,
+    description: Option<String>,
+    fork: Option<bool>,
+    url: Option<String>,
 }
 
-pub struct Notification{
-    repository: Repository,
-    subject: {
-    },
-    "reason": "subscribed",
-    "unread": true,
-    "updated_at": "2014-11-07T22:01:45Z",
-    "last_read_at": "2014-11-07T22:01:45Z",
-    "url": "https://api.github.com/notifications/threads/1",
-    "subscription_url": "https://api.github.com/notifications/threads/1/subscription"
-
+#[derive(Deserialize, Debug)]
+pub struct NotificationSubject {
+    title: Option<String>,
+    url: Option<String>,
+    latest_comment_url: Option<String>,
+    r#type: Option<String>,
 }
 
-impl Notification {
+#[derive(Deserialize, Debug)]
+pub struct Notification {
+    repository: Option<Repository>,
+    subject: Option<NotificationSubject>,
+    reason: Option<String>,
+    unread: Option<bool>,
+    updated_at: Option<String>,
+    last_read_at: Option<String>,
+    url: Option<String>,
+    subscription_url: Option<String>,
 }
+
+impl Notification {}

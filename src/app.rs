@@ -1,9 +1,10 @@
-mod misc;
 pub mod auth;
+mod misc;
 use auth::token_is_valid;
 
-use crate::db;
+use crate::db::{self, Notification};
 
+use self::misc::get_notifications;
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
@@ -29,11 +30,12 @@ pub struct ActionResponse {
     pub message: String,
     pub res_type: ActionResponseType,
     pub content_type: Option<ContentType>,
+    pub notifications: Option<Vec<Notification>>,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum ContentType {
-    RepositoryComment,
+    Notification,
 }
 
 #[derive(Debug, PartialEq)]
@@ -45,14 +47,14 @@ pub enum ActionResponseType {
 }
 pub struct Session {
     pub action_responses: Vec<ActionResponse>,
-    pub token: String
+    pub token: String,
 }
 
 impl Session {
     pub fn new(token: String) -> Self {
         Session {
             action_responses: vec![],
-            token
+            token,
         }
     }
 
@@ -62,6 +64,7 @@ impl Session {
                 message: "you are not authenticated".to_string(),
                 res_type: ActionResponseType::Error,
                 content_type: None,
+                notifications: None,
             });
         }
         match action {
@@ -75,13 +78,14 @@ impl Session {
                 self.show_version();
             }
             Some(Action::GetNotifications) => {
-                self.get_notifications();
+                self.get_notifications().await;
             }
             None => {
                 self.action_responses.push(ActionResponse {
                     message: "no action?".to_string(),
                     res_type: ActionResponseType::Error,
                     content_type: None,
+                    notifications: None,
                 });
             }
         }
@@ -92,16 +96,25 @@ impl Session {
         match misc::get_user(self).await {
             Some(user) => {
                 db::User::save(&user);
-                self.action_responses.push(ActionResponse { message: "User set successfully.".to_owned(), res_type: ActionResponseType::Success, content_type: None })
-            },
-            None => {
-                self.action_responses.push(ActionResponse { message: "No user found.".to_owned(), res_type: ActionResponseType::Error, content_type: None })
-            },
+                self.action_responses.push(ActionResponse {
+                    message: "User set successfully.".to_owned(),
+                    res_type: ActionResponseType::Success,
+                    content_type: None,
+                    notifications: None
+                })
+            }
+            None => self.action_responses.push(ActionResponse {
+                message: "No user found.".to_owned(),
+                res_type: ActionResponseType::Error,
+                content_type: None,
+                notifications: None
+            }),
         }
     }
 
-    fn get_notifications(&self){
-        todo!()
+    async fn get_notifications(&mut self) {
+        println!("get notificiations");
+        get_notifications(self).await;
     }
 
     fn show_version(&mut self) {
@@ -109,6 +122,7 @@ impl Session {
             message: env!("CARGO_PKG_VERSION").to_string(),
             res_type: ActionResponseType::Silent,
             content_type: None,
+            notifications: None
         });
     }
 
@@ -124,6 +138,7 @@ h, help         -                   what you are doing now
             .to_string(),
             res_type: ActionResponseType::Silent,
             content_type: None,
+            notifications: None
         });
     }
 }

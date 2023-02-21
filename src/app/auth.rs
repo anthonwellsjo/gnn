@@ -50,7 +50,7 @@ pub async fn create_session() -> AuthRequest {
     }
 
     db::Auth::get_last_session().unwrap().unwrap()
-} 
+}
 
 async fn validate_session(token: &str) -> Result<bool, reqwest::Error> {
     let client = reqwest::Client::builder().user_agent("curl").build()?;
@@ -74,7 +74,7 @@ pub async fn authenticate() -> Result<AuthRequest, reqwest::Error> {
 
     let res = match db::Auth::save_token(session) {
         Ok(session) => Ok(session),
-        Err(err) => todo!()
+        Err(err) => todo!(),
     };
 
     res
