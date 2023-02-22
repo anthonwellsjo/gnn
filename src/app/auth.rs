@@ -46,11 +46,7 @@ pub async fn create_session() -> AuthRequest {
     };
 
     if !token_is_valid(&last_session.unwrap().access_token.unwrap()).await {
-        let res = authenticate().await;
-        match res{
-            Ok(_) => {},
-            Err(err) => panic!("{:?}",err),
-        }
+        authenticate().await;
     }
 
     db::Auth::get_last_session().unwrap().unwrap()
@@ -71,22 +67,22 @@ async fn validate_session(token: &str) -> Result<bool, reqwest::Error> {
     }
 }
 
-pub async fn authenticate() -> Result<AuthRequest, reqwest::Error> {
-    let res = step_one().await?;
+pub async fn authenticate() -> AuthRequest {
+    let res = step_one().await;
     println!("step two");
     step_two(&res.user_code).await;
-    let session = step_three(&res).await?;
+    let session = step_three(&res).await;
 
     let res = match db::Auth::save_token(session) {
-        Ok(session) => Ok(session),
-        Err(err) => todo!(),
+        Ok(session) => session,
+        Err(err) => panic!("{:?}",err),
     };
 
     res
 }
 
 ///App requests the device and user verification codes from GitHub
-pub async fn step_one() -> Result<StepOneResponse, reqwest::Error> {
+pub async fn step_one() -> StepOneResponse {
     println!("step one");
     let mut json = HashMap::new();
     json.insert("client_id", CLIENT_ID);
@@ -95,9 +91,11 @@ pub async fn step_one() -> Result<StepOneResponse, reqwest::Error> {
         .header("Accept", "application/json")
         .json(&json)
         .send()
-        .await?
+        .await
+        .expect("Auth step one req")
         .json::<StepOneResponse>()
         .await
+        .expect("Auth step json to parse")
 }
 
 ///Prompt the user to enter the user code in a browser
@@ -116,7 +114,7 @@ pub async fn step_two(user_code: &str) {
 }
 
 // /// Poll GitHub to check if the user authorized the device
-pub async fn step_three(res: &StepOneResponse) -> Result<AuthRequest, reqwest::Error> {
+pub async fn step_three(res: &StepOneResponse) -> AuthRequest {
     println!("Waiting for authentication...");
     thread::sleep(Duration::from_secs(2));
     let mut json = HashMap::new();
@@ -135,9 +133,11 @@ pub async fn step_three(res: &StepOneResponse) -> Result<AuthRequest, reqwest::E
             .header("Accept", "application/json")
             .json(&json)
             .send()
-            .await?
+            .await
+            .expect("Auth step three req")
             .json::<StepThreeResponse>()
-            .await?;
+            .await
+            .expect("Auth step three to parse");
 
         if let Some(err) = &res.error {
             println!("{:?}", err);
@@ -146,11 +146,11 @@ pub async fn step_three(res: &StepOneResponse) -> Result<AuthRequest, reqwest::E
         if let Some(ref error_description) = res.error_description {
             println!("{}", error_description);
         } else {
-            return Ok(AuthRequest {
+            return AuthRequest {
                 access_token: res.access_token,
                 token_type: res.token_type,
                 scope: res.scope,
-            });
+            };
         }
 
         println!("end of loop, waiting");

@@ -3,6 +3,7 @@ mod app;
 mod models;
 
 use app::auth::create_session;
+use app::bash_driver;
 
 #[tokio::main]
 async fn main() {
@@ -19,8 +20,7 @@ async fn main() {
 
     println!("after run");
     for res in session.action_responses.iter(){
-        // display_action_response(res);
-        println!("{:?}", res);
+        bash_driver::display_action_response(res);
     }
 
 }

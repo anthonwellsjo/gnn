@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod bash_driver;
 mod misc;
 use auth::token_is_valid;
 

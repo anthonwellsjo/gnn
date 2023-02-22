@@ -79,7 +79,7 @@ impl Auth {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone )]
 pub struct User {
     name: Option<String>,
     login: Option<String>,
@@ -135,7 +135,7 @@ impl User {
     }
 }
 
-fn get_notification_reason(s: &str) -> String {
+pub fn get_notification_reason(s: &str) -> String {
     match s{
             "assign" => "You were assigned to the issue.".to_owned(),
             "author" => "You created the thread.".to_owned(),
@@ -153,7 +153,7 @@ fn get_notification_reason(s: &str) -> String {
         }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Repository {
     id: Option<i64>,
     name: Option<String>,
@@ -165,24 +165,24 @@ pub struct Repository {
     url: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone )]
 pub struct NotificationSubject {
-    title: Option<String>,
-    url: Option<String>,
-    latest_comment_url: Option<String>,
-    r#type: Option<String>,
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub latest_comment_url: Option<String>,
+    pub r#type: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Notification {
-    repository: Option<Repository>,
-    subject: Option<NotificationSubject>,
-    reason: Option<String>,
-    unread: Option<bool>,
-    updated_at: Option<String>,
-    last_read_at: Option<String>,
-    url: Option<String>,
-    subscription_url: Option<String>,
+    pub repository: Option<Repository>,
+    pub subject: Option<NotificationSubject>,
+    pub reason: Option<String>,
+    pub unread: Option<bool>,
+    pub updated_at: Option<String>,
+    pub last_read_at: Option<String>,
+    pub url: Option<String>,
+    pub subscription_url: Option<String>,
 }
 
 impl Notification {}
