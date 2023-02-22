@@ -1,6 +1,5 @@
-use super::{ActionResponse, ContentType, Session};
-use crate::db::{AuthRequest, Notification, User};
-use serde::Deserialize;
+use super::{ActionResponse, Session, ContentType};
+use crate::db::{User, Notification};
 
 pub async fn get_user(session: &mut Session) -> Option<User> {
     let access_token = &session.token;
@@ -48,7 +47,7 @@ pub async fn get_notifications(session: &mut Session) {
         .await;
 
     let res = match res {
-        Ok(res) => Some(res.json::<serde_json::Value>().await.unwrap()),
+        Ok(res) => Some(res.json::<Vec<Notification>>().await.unwrap()),
         Err(_) => {
             session.action_responses.push(ActionResponse {
                 message: "Error while getting user...".to_owned(),
@@ -60,14 +59,13 @@ pub async fn get_notifications(session: &mut Session) {
         }
     };
 
-    println!("{:?}", {res})
-    // match res {
-    //     Some(vec) => session.action_responses.push(ActionResponse {
-    //         message: "Received notifications".to_owned(),
-    //         res_type: super::ActionResponseType::Content,
-    //         content_type: Some(ContentType::Notification),
-    //         notifications: Some(vec)
-    //     }),
-    //     None => todo!(),
-    // }
+    match res {
+        Some(vec) => session.action_responses.push(ActionResponse {
+            message: "Received notifications".to_owned(),
+            res_type: super::ActionResponseType::Content,
+            content_type: Some(ContentType::Notification),
+            notifications: Some(vec)
+        }),
+        None => todo!(),
+    }
 }

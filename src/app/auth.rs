@@ -46,7 +46,11 @@ pub async fn create_session() -> AuthRequest {
     };
 
     if !token_is_valid(&last_session.unwrap().access_token.unwrap()).await {
-        authenticate().await;
+        let res = authenticate().await;
+        match res{
+            Ok(_) => {},
+            Err(err) => panic!("{:?}",err),
+        }
     }
 
     db::Auth::get_last_session().unwrap().unwrap()
@@ -69,6 +73,7 @@ async fn validate_session(token: &str) -> Result<bool, reqwest::Error> {
 
 pub async fn authenticate() -> Result<AuthRequest, reqwest::Error> {
     let res = step_one().await?;
+    println!("step two");
     step_two(&res.user_code).await;
     let session = step_three(&res).await?;
 
@@ -82,10 +87,11 @@ pub async fn authenticate() -> Result<AuthRequest, reqwest::Error> {
 
 ///App requests the device and user verification codes from GitHub
 pub async fn step_one() -> Result<StepOneResponse, reqwest::Error> {
+    println!("step one");
     let mut json = HashMap::new();
     json.insert("client_id", CLIENT_ID);
     reqwest::Client::new()
-        .post("https://github.com/login/device/code")
+        .post("https://github.com/login/device/code?scope=notifications%20repo")
         .header("Accept", "application/json")
         .json(&json)
         .send()
