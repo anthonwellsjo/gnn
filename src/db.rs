@@ -155,14 +155,14 @@ pub fn get_notification_reason(s: &str) -> String {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Repository {
-    id: Option<i64>,
-    name: Option<String>,
-    owner: Option<User>,
-    private: Option<bool>,
-    html_url: Option<String>,
-    description: Option<String>,
-    fork: Option<bool>,
-    url: Option<String>,
+    pub id: Option<i64>,
+    pub name: Option<String>,
+    pub owner: Option<User>,
+    pub private: Option<bool>,
+    pub html_url: Option<String>,
+    pub description: Option<String>,
+    pub fork: Option<bool>,
+    pub url: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone )]
