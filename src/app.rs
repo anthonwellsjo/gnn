@@ -5,8 +5,6 @@ use auth::token_is_valid;
 
 use crate::db::{self, Notification};
 
-use self::misc::get_notifications;
-
 #[derive(Debug, PartialEq)]
 pub enum Action {
     Init,
@@ -114,7 +112,8 @@ impl Session {
     }
 
     async fn get_notifications(&mut self, no: Option<String>) {
-        get_notifications(self, no).await;
+        let notifications = Notification::get_many(self, no).await;
+        Notification::save_many(self, notifications).await;
     }
 
     fn show_version(&mut self) {

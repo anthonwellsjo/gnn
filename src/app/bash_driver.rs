@@ -21,30 +21,32 @@ pub fn display_action_response(res: &ActionResponse) {
 fn show_notifications(not: &Option<Vec<Notification>>) {
     let not = not.as_ref().unwrap();
         println!(
-            "  {} {} | {} | {}  {}",
+            "  {} {} {} | {} | {}  {}",
             "",
-            format_text(&8, &" repo".to_owned()),
-            format_text(&10, &"  type".to_owned()),
-            format_text(&15, &"  subject".to_owned()),
-            format_text(&5, &"not reason".to_owned())
+            format_text(&3, &"id".to_owned(), true),
+            format_text(&8, &" repo".to_owned(), false),
+            format_text(&10, &"  type".to_owned(), false),
+            format_text(&15, &"  subject".to_owned(), false),
+            format_text(&5, &"not reason".to_owned(), false)
         );
-    println!("-------------------------------------------------------");
+    println!("-----------------------------------------------------------------------");
 
     for no in not.into_iter() {
         let date = DateTime::parse_from_rfc3339(no.updated_at.as_ref().unwrap()).unwrap();
         println!(
-            "{}  {} | {} | {} | {} {}",
+            "{}  {} {} | {} | {} | {} {}",
             get_unread_icon(*no.unread.as_ref().unwrap()),
-            format_text(&8, no.repository.as_ref().unwrap().name.as_ref().unwrap()),
-            format_text(&12, no.subject.as_ref().unwrap().r#type.as_ref().unwrap()),
-            format_text(&20, no.subject.as_ref().unwrap().title.as_ref().unwrap()),
+            format_text(&3, &Notification::get_spec_id(no.id.as_ref().unwrap()), true),
+            format_text(&8, no.repository.as_ref().unwrap().name.as_ref().unwrap(), false),
+            format_text(&10, no.subject.as_ref().unwrap().r#type.as_ref().unwrap(), false),
+            format_text(&20, no.subject.as_ref().unwrap().title.as_ref().unwrap(), false),
             date.format("%d/%m %H:%M"),
             get_notification_reason_icon(no.reason.as_ref().unwrap()),
         );
     }
 }
 
-fn format_text(n_of_chars: &usize, text: &std::string::String) -> String {
+fn format_text(n_of_chars: &usize, text: &std::string::String, no_wrap: bool) -> String {
     let mut was_too_long = false;
     let mut text: String = text.to_owned();
 
@@ -55,7 +57,7 @@ fn format_text(n_of_chars: &usize, text: &std::string::String) -> String {
             Ordering::Greater => {text.pop().unwrap(); was_too_long = true;},
         }
     };
-    if was_too_long {text = text.to_owned() + "..";} else {text = text.to_owned() + "  ";}
+    if was_too_long && !no_wrap {text = text.to_owned() + "..";} else {text = text.to_owned() + "  ";}
     return text.to_owned();
 }
 

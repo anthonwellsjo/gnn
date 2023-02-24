@@ -175,6 +175,7 @@ pub struct NotificationSubject {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Notification {
+    pub id: Option<String>,
     pub repository: Option<Repository>,
     pub subject: Option<NotificationSubject>,
     pub reason: Option<String>,
@@ -185,4 +186,50 @@ pub struct Notification {
     pub subscription_url: Option<String>,
 }
 
-impl Notification {}
+impl Notification {
+    pub async fn save(notification: &Self) -> Result<()> {
+        println!("save notification");
+
+        let conn = Self::get_db_connection()?;
+
+        conn.execute(
+            "INSERT INTO notification (id, url) values (?1, ?2)",
+            &[&Notification::get_spec_id(notification.id.as_ref().unwrap()), &notification.url.as_ref().unwrap()],
+        )?;
+
+        conn.close()
+            .unwrap_or_else(|_| panic!("Panicking while closing conection."));
+
+        Ok(())
+    }
+
+    pub async fn save_many(arg: &mut crate::app::Session, notifications: Vec<Notification>) {
+        for no in notifications{
+            Self::save(&no).await;
+        }
+    }
+
+    pub fn get_db_connection() -> Result<Connection> {
+        let conn = Connection::open(get_app_path("gnn"))?;
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS notification (
+            id TEXT,
+            url: TEXT
+         )",
+            [],
+        )?;
+        Ok(conn)
+    }
+
+    pub fn clean_table() -> Result<()> {
+        let conn = Connection::open(get_app_path("gnn"))?;
+        conn.execute(
+            "DELETE * FROM notification",
+            [],
+        )?;
+        Ok(())
+    }
+
+}
+
+
