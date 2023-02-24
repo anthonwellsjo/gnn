@@ -1,3 +1,6 @@
+use std::cmp::Ordering;
+use chrono::{Local, DateTime};
+
 use crate::{
     app::{ActionResponse, ActionResponseType},
     db::{get_notification_reason, Notification},
@@ -17,20 +20,43 @@ pub fn display_action_response(res: &ActionResponse) {
 
 fn show_notifications(not: &Option<Vec<Notification>>) {
     let not = not.as_ref().unwrap();
-    for no in not.into_iter() {
         println!(
-            "{} {} | {} | {} | {}",
+            "  {} {} | {} | {}  {}",
+            "",
+            format_text(&8, &" repo".to_owned()),
+            format_text(&10, &"  type".to_owned()),
+            format_text(&15, &"  subject".to_owned()),
+            format_text(&5, &"not reason".to_owned())
+        );
+    println!("-------------------------------------------------------");
+
+    for no in not.into_iter() {
+        let date = DateTime::parse_from_rfc3339(no.updated_at.as_ref().unwrap()).unwrap();
+        println!(
+            "{}  {} | {} | {} | {} {}",
             get_unread_icon(*no.unread.as_ref().unwrap()),
-            no.repository.as_ref().unwrap().name.as_ref().unwrap(),
-            no.subject.as_ref().unwrap().r#type.as_ref().unwrap(),
-            no.subject.as_ref().unwrap().title.as_ref().unwrap(),
-            get_notification_reason(no.reason.as_ref().unwrap()),
+            format_text(&8, no.repository.as_ref().unwrap().name.as_ref().unwrap()),
+            format_text(&12, no.subject.as_ref().unwrap().r#type.as_ref().unwrap()),
+            format_text(&20, no.subject.as_ref().unwrap().title.as_ref().unwrap()),
+            date.format("%d/%m %H:%M"),
+            get_notification_reason_icon(no.reason.as_ref().unwrap()),
         );
     }
 }
 
-fn format_text(n_of_chars: String) -> String{
+fn format_text(n_of_chars: &usize, text: &std::string::String) -> String {
+    let mut was_too_long = false;
+    let mut text: String = text.to_owned();
 
+    loop {
+        match text.chars().count().cmp(n_of_chars){
+            Ordering::Less => {text = text.to_owned() + " ";},
+            Ordering::Equal => {break;},
+            Ordering::Greater => {text.pop().unwrap(); was_too_long = true;},
+        }
+    };
+    if was_too_long {text = text.to_owned() + "..";} else {text = text.to_owned() + "  ";}
+    return text.to_owned();
 }
 
 fn display_icon(res_type: &ActionResponseType) {
@@ -47,7 +73,7 @@ fn get_unread_icon(unread: bool) -> String{
     if unread {
         return " ".to_owned()
     } else {
-        return "✔".to_owned()
+        return "👀".to_owned()
     }
 }
 
