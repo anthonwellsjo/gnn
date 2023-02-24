@@ -75,7 +75,7 @@ pub async fn authenticate() -> AuthRequest {
 
     let res = match db::Auth::save_token(session) {
         Ok(session) => session,
-        Err(err) => panic!("{:?}",err),
+        Err(err) => panic!("{:?}", err),
     };
 
     res

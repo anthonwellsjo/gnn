@@ -89,9 +89,8 @@ impl Notification {
         }
     }
 
-    pub fn get_spec_id(id: &str) -> String{
+    pub fn get_spec_id(id: &str) -> String {
         let len = id.len();
-        id[len-3..].to_owned()
+        id[len - 3..].to_owned()
     }
-
 }

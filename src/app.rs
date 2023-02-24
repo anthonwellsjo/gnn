@@ -11,11 +11,15 @@ pub enum Action {
     Help,
     Version,
     GetNotifications,
+    Inspect,
+    Goto,
 }
 impl Action {
     pub fn from_string(s: &str) -> Option<Action> {
         match s {
-            "i" | "init" => Some(Action::Init),
+            "init" => Some(Action::Init),
+            "i" | "inspect" => Some(Action::Inspect),
+            "g" | "goto" => Some(Action::Goto),
             "gn" | "get-notifications" => Some(Action::GetNotifications),
             "h" | "help" => Some(Action::Help),
             "v" | "version" => Some(Action::Version),
@@ -79,6 +83,12 @@ impl Session {
             Some(Action::GetNotifications) => {
                 self.get_notifications(argument).await;
             }
+            Some(Action::Goto) => {
+                self.goto_notification(argument).await;
+            }
+            Some(Action::Inspect) => {
+                self.inspect_notification(argument).await;
+            }
             None => {
                 self.action_responses.push(ActionResponse {
                     message: "no action?".to_string(),
@@ -99,14 +109,14 @@ impl Session {
                     message: "User set successfully.".to_owned(),
                     res_type: ActionResponseType::Success,
                     content_type: None,
-                    notifications: None
+                    notifications: None,
                 })
             }
             None => self.action_responses.push(ActionResponse {
                 message: "No user found.".to_owned(),
                 res_type: ActionResponseType::Error,
                 content_type: None,
-                notifications: None
+                notifications: None,
             }),
         }
     }
@@ -121,8 +131,16 @@ impl Session {
             message: env!("CARGO_PKG_VERSION").to_string(),
             res_type: ActionResponseType::Silent,
             content_type: None,
-            notifications: None
+            notifications: None,
         });
+    }
+
+    async fn goto_notification(&self, argument: Option<String>){
+        todo!()
+    }
+
+    async fn inspect_notification(&self, argument: Option<String>){
+        todo!()
     }
 
     fn show_help(&mut self) {
@@ -130,15 +148,17 @@ impl Session {
             message: "
 command:        argument:
 
-i, init         -                   initialize
+init            -                   initialize
+i, inspect      id                  inspect notification
+g, goto         id                  goto notification url in browser
+gn, get-not     x?                  get <x> notifications (default 10)
 v, version      -                   current version
 h, help         -                   what you are doing now
-gn, get-not     x = 10              get <x> notifications 
             "
             .to_string(),
             res_type: ActionResponseType::Silent,
             content_type: None,
-            notifications: None
+            notifications: None,
         });
     }
 }
