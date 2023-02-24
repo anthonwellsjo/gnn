@@ -79,7 +79,7 @@ impl Session {
                 self.show_version();
             }
             Some(Action::GetNotifications) => {
-                self.get_notifications().await;
+                self.get_notifications(argument).await;
             }
             None => {
                 self.action_responses.push(ActionResponse {
@@ -113,9 +113,8 @@ impl Session {
         }
     }
 
-    async fn get_notifications(&mut self) {
-        println!("get notificiations");
-        get_notifications(self).await;
+    async fn get_notifications(&mut self, no: Option<String>) {
+        get_notifications(self, no).await;
     }
 
     fn show_version(&mut self) {
@@ -135,6 +134,7 @@ command:        argument:
 i, init         -                   initialize
 v, version      -                   current version
 h, help         -                   what you are doing now
+gn, get-not     x = 10              get <x> notifications 
             "
             .to_string(),
             res_type: ActionResponseType::Silent,

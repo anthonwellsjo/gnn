@@ -1,5 +1,5 @@
-use super::{ActionResponse, Session, ContentType};
-use crate::db::{User, Notification};
+use super::{ActionResponse, ContentType, Session};
+use crate::db::{Notification, User};
 
 pub async fn get_user(session: &mut Session) -> Option<User> {
     let access_token = &session.token;
@@ -23,7 +23,7 @@ pub async fn get_user(session: &mut Session) -> Option<User> {
                 message: "Error while getting user...".to_owned(),
                 res_type: super::ActionResponseType::Error,
                 content_type: None,
-                notifications: None
+                notifications: None,
             });
             None
         }
@@ -31,7 +31,19 @@ pub async fn get_user(session: &mut Session) -> Option<User> {
     res
 }
 
-pub async fn get_notifications(session: &mut Session) {
+pub async fn get_notifications(session: &mut Session, no: Option<String>) {
+    let no = match no.unwrap_or("20".to_owned()).parse::<u8>() {
+        Ok(no) => no,
+        Err(_) => {
+            session.action_responses.push(ActionResponse {
+                message: "Argument wasn't a valid u8".to_owned(),
+                res_type: super::ActionResponseType::Error,
+                content_type: None,
+                notifications: None,
+            });
+            20
+        }
+    };
     let access_token = &session.token;
 
     let client = reqwest::Client::builder()
@@ -40,7 +52,7 @@ pub async fn get_notifications(session: &mut Session) {
         .unwrap();
 
     let res = client
-        .get("https://api.github.com/notifications?all=true")
+        .get("https://api.github.com/notifications?all=true&per_page=".to_owned() + &no.to_string())
         .header("Accept", "application/vnd.github+json")
         .bearer_auth(&access_token)
         .send()
@@ -53,7 +65,7 @@ pub async fn get_notifications(session: &mut Session) {
                 message: "Error while getting user...".to_owned(),
                 res_type: super::ActionResponseType::Error,
                 content_type: None,
-                notifications: None
+                notifications: None,
             });
             None
         }
@@ -64,7 +76,7 @@ pub async fn get_notifications(session: &mut Session) {
             message: "Received notifications".to_owned(),
             res_type: super::ActionResponseType::Content,
             content_type: Some(ContentType::Notification),
-            notifications: Some(vec)
+            notifications: Some(vec),
         }),
         None => todo!(),
     }
