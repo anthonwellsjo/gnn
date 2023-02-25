@@ -84,10 +84,34 @@ impl Session {
                 self.get_notifications(argument).await;
             }
             Some(Action::Goto) => {
-                self.goto_notification(argument).await;
+                match argument {
+                    Some(arg) => {
+                        self.goto_notification(arg).await;
+                    }
+                    None => {
+                        self.action_responses.push(ActionResponse {
+                            message: "this action requires an argument.".to_owned(),
+                            res_type: ActionResponseType::Error,
+                            content_type: None,
+                            notifications: None,
+                        });
+                    }
+                };
             }
             Some(Action::Inspect) => {
-                self.inspect_notification(argument).await;
+                match argument {
+                    Some(arg) => {
+                        self.inspect_notification(arg).await;
+                    }
+                    None => {
+                        self.action_responses.push(ActionResponse {
+                            message: "this action requires an argument.".to_owned(),
+                            res_type: ActionResponseType::Error,
+                            content_type: None,
+                            notifications: None,
+                        });
+                    }
+                };
             }
             None => {
                 self.action_responses.push(ActionResponse {
@@ -135,11 +159,31 @@ impl Session {
         });
     }
 
-    async fn goto_notification(&self, argument: Option<String>){
-        todo!()
+    async fn goto_notification(&mut self, argument: String) {
+        let nots = db::Notification::get_by_id(argument);
+        match nots {
+            Ok(nots) => {
+                open::that(nots.unwrap().first().unwrap().url.as_ref().unwrap()).unwrap();
+            }
+            Err(err) => self.action_responses.push(ActionResponse {
+                message: "Error: ".to_owned() + &err.to_string(),
+                res_type: ActionResponseType::Error,
+                content_type: None,
+                notifications: None,
+            }),
+        }
     }
 
-    async fn inspect_notification(&self, argument: Option<String>){
+    async fn inspect_notification(&self, argument: String) {
+        // let nots = db::Notification::get_by_id(argument);
+        // match nots{
+        //     Ok(nots) => {
+        //         self.action_responses.push(ActionResponse { message: "".to_owned(), res_type: ActionResponseType::Content, content_type: Some(ContentType::Notification), notifications: nots});
+        //     },
+        //     Err(err) => {
+        //         self.action_responses.push(ActionResponse { message: "Error: ".to_owned() + &err.to_string(), res_type: ActionResponseType::Error, content_type: None , notifications: None })
+        //     },
+        // }
         todo!()
     }
 

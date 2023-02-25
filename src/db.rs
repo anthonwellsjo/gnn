@@ -1,6 +1,3 @@
-use core::fmt;
-use std::{error::Error, str::FromStr};
-
 use arw_brr::get_app_path;
 use rusqlite::{Connection, Result};
 use serde::Deserialize;
@@ -228,6 +225,43 @@ impl Notification {
             [],
         )?;
         Ok(())
+    }
+
+    pub fn get_by_id(id: String) -> Result<Option<Vec<Notification>>>{
+        let conn = Connection::open(get_app_path("gnn"))?;
+
+        let mut stmt = conn.prepare(
+            &("SELECT (id, url)
+             FROM notification 
+             WHERE id=".to_owned() +&id),
+        )?;
+
+        let notifications = stmt.query_map([], |row| {
+            Ok(Notification {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                subscription_url: None,
+                reason: None,
+                updated_at: None,
+                subject: None,
+                unread: None,
+                repository: None,
+                last_read_at: None
+            })
+        })?;
+
+        let mut nots: Vec<Notification> = Vec::new();
+
+        for not in notifications {
+            let not = match not {
+                Ok(res) => res,
+                Err(error) => panic!("Problem opening the file: {:?}", error),
+            };
+            nots.push(not);
+        }
+
+        Ok(Some(nots))
+
     }
 
 }
