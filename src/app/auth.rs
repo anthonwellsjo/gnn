@@ -49,9 +49,9 @@ pub async fn create_session() -> AuthRequest {
         Some(auth_req) => {
             if !token_is_valid(&auth_req.access_token.unwrap()).await {
                 authenticate().await;
-            }}
+            }
+        }
         None => {
-            println!("found no session");
             authenticate().await;
         }
     };

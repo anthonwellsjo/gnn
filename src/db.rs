@@ -193,7 +193,7 @@ impl Notification {
 
         println!("execute");
         conn.execute(
-            "INSERT INTO notification (gh_id, short_id, url) values (?1, ?2)",
+            "INSERT INTO notification (gh_id, short_id, url) values (?1, ?2, ?3)",
             &[
                 &notification.gh_id.as_ref().unwrap(),
                 &Notification::get_spec_id(notification.gh_id.as_ref().unwrap()),
@@ -241,7 +241,7 @@ impl Notification {
         let conn = Connection::open(get_app_path("gnn"))?;
 
         let mut stmt = conn.prepare(
-            &("SELECT or_id, url
+            &("SELECT short_id, url
             FROM notification 
             WHERE short_id="
                .to_owned()
