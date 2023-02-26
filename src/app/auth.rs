@@ -45,10 +45,16 @@ pub async fn create_session() -> AuthRequest {
         }
     };
 
-    if !token_is_valid(&last_session.unwrap().access_token.unwrap()).await {
-        authenticate().await;
-    }
-
+    match last_session {
+        Some(auth_req) => {
+            if !token_is_valid(&auth_req.access_token.unwrap()).await {
+                authenticate().await;
+            }}
+        None => {
+            println!("found no session");
+            authenticate().await;
+        }
+    };
     db::Auth::get_last_session().unwrap().unwrap()
 }
 

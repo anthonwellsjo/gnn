@@ -24,7 +24,7 @@ impl Auth {
         )?;
 
         conn.close()
-            .unwrap_or_else(|_| panic!("Panicking while closing conection."));
+            .unwrap_or_else(|_| panic!("Panicking while closing connection."));
 
         Ok(session)
     }
@@ -32,9 +32,8 @@ impl Auth {
     ///  Gets connection to DB. This function will create a new DB if
     ///  not already present
     pub fn get_db_connection() -> Result<Connection> {
-        println!("get db connection");
-
         let conn = Connection::open(get_app_path("gnn"))?;
+
         conn.execute(
             "CREATE TABLE IF NOT EXISTS auth (
              id INTEGER PRIMARY KEY,
@@ -76,7 +75,7 @@ impl Auth {
     }
 }
 
-#[derive(Deserialize, Debug, Clone )]
+#[derive(Deserialize, Debug, Clone)]
 pub struct User {
     name: Option<String>,
     login: Option<String>,
@@ -101,7 +100,7 @@ impl User {
         )?;
 
         conn.close()
-            .unwrap_or_else(|_| panic!("Panicking while closing conection."));
+            .unwrap_or_else(|_| panic!("Panicking while closing connection."));
 
         Ok(())
     }
@@ -162,7 +161,7 @@ pub struct Repository {
     pub url: Option<String>,
 }
 
-#[derive(Deserialize, Debug, Clone )]
+#[derive(Deserialize, Debug, Clone)]
 pub struct NotificationSubject {
     pub title: Option<String>,
     pub url: Option<String>,
@@ -172,7 +171,10 @@ pub struct NotificationSubject {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Notification {
-    pub id: Option<String>,
+    // pub id: Option<String>,
+    #[serde(rename="id")]
+    pub gh_id: Option<String>,
+    pub short_id: Option<String>,
     pub repository: Option<Repository>,
     pub subject: Option<NotificationSubject>,
     pub reason: Option<String>,
@@ -185,60 +187,73 @@ pub struct Notification {
 
 impl Notification {
     pub async fn save(notification: &Self) -> Result<()> {
-        println!("save notification");
+        println!("save notification {:?}", notification);
 
         let conn = Self::get_db_connection()?;
 
+        println!("execute");
         conn.execute(
-            "INSERT INTO notification (id, url) values (?1, ?2)",
-            &[&Notification::get_spec_id(notification.id.as_ref().unwrap()), &notification.url.as_ref().unwrap()],
-        )?;
+            "INSERT INTO notification (gh_id, short_id, url) values (?1, ?2)",
+            &[
+                &notification.gh_id.as_ref().unwrap(),
+                &Notification::get_spec_id(notification.gh_id.as_ref().unwrap()),
+                &notification.url.as_ref().unwrap(),
+            ])?;
 
         conn.close()
-            .unwrap_or_else(|_| panic!("Panicking while closing conection."));
+            .unwrap_or_else(|_| panic!("Panicking while closing connection."));
 
         Ok(())
     }
 
-    pub async fn save_many(arg: &mut crate::app::Session, notifications: Vec<Notification>) {
-        for no in notifications{
-            Self::save(&no).await;
+    pub async fn save_many(_arg: &mut crate::app::Session, notifications: Vec<Notification>) {
+        for no in notifications {
+            Self::save(&no).await.expect("Couldn't save notification");
         }
     }
 
     pub fn get_db_connection() -> Result<Connection> {
+        println!("get conn");
         let conn = Connection::open(get_app_path("gnn"))?;
+        println!("got conn");
+
         conn.execute(
             "CREATE TABLE IF NOT EXISTS notification (
-            id TEXT,
-            url: TEXT
+            id INTEGER PRIMARY KEY,
+            gh_id TEXT NOT NULL,
+            short_id TEXT NOT NULL,
+            url TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
          )",
             [],
         )?;
+        println!("created table");
         Ok(conn)
     }
 
     pub fn clean_table() -> Result<()> {
         let conn = Connection::open(get_app_path("gnn"))?;
-        conn.execute(
-            "DELETE * FROM notification",
-            [],
-        )?;
+        conn.execute("DELETE * FROM notification", [])?;
         Ok(())
     }
 
-    pub fn get_by_id(id: String) -> Result<Option<Vec<Notification>>>{
+    pub fn get_by_id(id: String) -> Result<Option<Vec<Notification>>> {
         let conn = Connection::open(get_app_path("gnn"))?;
 
         let mut stmt = conn.prepare(
-            &("SELECT (id, url)
-             FROM notification 
-             WHERE id=".to_owned() +&id),
+            &("SELECT or_id, url
+            FROM notification 
+            WHERE short_id="
+               .to_owned()
+               + &id + "
+            LIMIT 1"),
+             
         )?;
 
         let notifications = stmt.query_map([], |row| {
             Ok(Notification {
-                id: row.get(0)?,
+                gh_id: None,
+                short_id: row.get(0)?,
                 url: row.get(1)?,
                 subscription_url: None,
                 reason: None,
@@ -246,7 +261,7 @@ impl Notification {
                 subject: None,
                 unread: None,
                 repository: None,
-                last_read_at: None
+                last_read_at: None,
             })
         })?;
 
@@ -261,9 +276,5 @@ impl Notification {
         }
 
         Ok(Some(nots))
-
     }
-
 }
-
-

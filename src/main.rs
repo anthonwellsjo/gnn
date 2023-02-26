@@ -18,7 +18,7 @@ async fn main() {
     println!("run");
     session.run(action, argument).await;
 
-    println!("after run");
+    println!("--------------- res ---------------");
     for res in session.action_responses.iter(){
         bash_driver::display_action_response(res);
     }

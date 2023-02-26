@@ -161,6 +161,7 @@ impl Session {
 
     async fn goto_notification(&mut self, argument: String) {
         let nots = db::Notification::get_by_id(argument);
+        println!("{:?}", nots);
         match nots {
             Ok(nots) => {
                 open::that(nots.unwrap().first().unwrap().url.as_ref().unwrap()).unwrap();
