@@ -2,6 +2,8 @@ use arw_brr::get_app_path;
 use rusqlite::{Connection, Result};
 use serde::Deserialize;
 
+use crate::models::{Repository, Notification, User};
+
 #[derive(Deserialize, Debug)]
 pub struct AuthRequest {
     pub access_token: Option<String>,
@@ -75,18 +77,6 @@ impl Auth {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct User {
-    name: Option<String>,
-    login: Option<String>,
-    avatar_url: Option<String>,
-    html_url: Option<String>,
-    subscriptions_url: Option<String>,
-    organizations_url: Option<String>,
-    repos_url: Option<String>,
-    events_url: Option<String>,
-    received_events_url: Option<String>,
-}
 
 impl User {
     pub fn save(user: &Self) -> Result<()> {
@@ -149,42 +139,6 @@ pub fn get_notification_reason(s: &str) -> String {
         }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct Repository {
-    pub id: Option<i64>,
-    pub name: Option<String>,
-    pub owner: Option<User>,
-    pub private: Option<bool>,
-    pub html_url: Option<String>,
-    pub description: Option<String>,
-    pub fork: Option<bool>,
-    pub url: Option<String>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct NotificationSubject {
-    pub title: Option<String>,
-    pub url: Option<String>,
-    pub latest_comment_url: Option<String>,
-    pub r#type: Option<String>,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct Notification {
-    // pub id: Option<String>,
-    #[serde(rename="id")]
-    pub gh_id: Option<String>,
-    pub short_id: Option<String>,
-    pub repository: Option<Repository>,
-    pub subject: Option<NotificationSubject>,
-    pub reason: Option<String>,
-    pub unread: Option<bool>,
-    pub updated_at: Option<String>,
-    pub last_read_at: Option<String>,
-    pub url: Option<String>,
-    pub subscription_url: Option<String>,
-}
-
 impl Notification {
     pub async fn save(notification: &Self) -> Result<()> {
         println!("save notification {:?}", notification);
@@ -196,8 +150,8 @@ impl Notification {
             "INSERT INTO notification (gh_id, short_id, url) values (?1, ?2, ?3)",
             &[
                 &notification.gh_id.as_ref().unwrap(),
-                &Notification::get_spec_id(notification.gh_id.as_ref().unwrap()),
-                &notification.url.as_ref().unwrap(),
+                &Notification::get_short_id(&notification.id),
+                &notification.url,
             ])?;
 
         conn.close()

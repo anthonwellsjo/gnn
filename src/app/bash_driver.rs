@@ -1,9 +1,8 @@
-use chrono::{DateTime, Local};
+use chrono::DateTime;
 use std::cmp::Ordering;
 
 use crate::{
-    app::{ActionResponse, ActionResponseType},
-    db::{get_notification_reason, Notification},
+    app::{ActionResponse, ActionResponseType}, models::Notification,
 };
 
 pub fn display_action_response(res: &ActionResponse) {
@@ -25,41 +24,41 @@ fn show_notifications(not: &Option<Vec<Notification>>) {
         "",
         format_text(&3, &"id".to_owned(), true),
         format_text(&8, &" repo".to_owned(), false),
-        format_text(&6, &"  type".to_owned(), false),
-        format_text(&15, &"  subject".to_owned(), false),
+        format_text(&10, &"  type".to_owned(), false),
+        format_text(&25, &"  subject".to_owned(), false),
         "  "
     );
     println!("--------------------------------------------------------------------");
 
     for no in not.into_iter() {
-        let date = DateTime::parse_from_rfc3339(no.updated_at.as_ref().unwrap()).unwrap();
+        let date = DateTime::parse_from_rfc3339(&no.updated_at).unwrap();
         println!(
             "{}  {} {} | {} | {} | {} {}",
-            get_unread_icon(*no.unread.as_ref().unwrap()),
+            get_unread_icon(no.unread),
             format_text(
                 &3,
-                &Notification::get_spec_id(no.gh_id.as_ref().unwrap()),
+                &Notification::get_short_id(no.gh_id.as_ref().unwrap()),
                 true
             ),
             format_text(
                 &8,
-                no.repository.as_ref().unwrap().name.as_ref().unwrap(),
+                &no.repository.name,
                 false
             ),
             format_text(
-                &6,
-                no.subject.as_ref().unwrap().r#type.as_ref().unwrap(),
+                &10,
+                &no.subject.type_field,
                 false
             ),
             format_text(
-                &15,
-                no.subject.as_ref().unwrap().title.as_ref().unwrap(),
+                &25,
+                &no.subject.title,
                 false
             ),
             date.format("%d/%m %H:%M"),
             format_text(
                 &3,
-                &get_notification_reason_icon(no.reason.as_ref().unwrap()),
+                &get_notification_reason_icon(&no.reason),
                 true
             ),
         );

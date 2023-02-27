@@ -1,5 +1,6 @@
+use crate::models::User;
+
 use super::{ActionResponse, ContentType, Session};
-use crate::db::{Notification, User};
 
 pub async fn get_user(session: &mut Session) -> Option<User> {
     let access_token = &session.token;
@@ -89,8 +90,37 @@ impl Notification {
         }
     }
 
-    pub fn get_spec_id(id: &str) -> String {
-        let len = id.len();
-        id[len - 3..].to_owned()
+    pub async fn fetch_url<Model: std::fmt::Debug + for<'de> serde::Deserialize<'de>>(
+        session: &mut Session,
+        api_url: &str,
+    ) {
+        let access_token = &session.token;
+
+        let client = reqwest::Client::builder()
+            .user_agent("curl")
+            .build()
+            .unwrap();
+
+        let res = client
+            .get(api_url)
+            .header("Accept", "application/vnd.github+json")
+            .bearer_auth(&access_token)
+            .send()
+            .await;
+
+        let res = match res {
+            Ok(res) => Some(res.json::<Model>().await.unwrap()),
+            Err(_) => {
+                session.action_responses.push(ActionResponse {
+                    message: "Error while getting user...".to_owned(),
+                    res_type: super::ActionResponseType::Error,
+                    content_type: None,
+                    notifications: None,
+                });
+                None
+            }
+        };
+
+        println!("{:?}", res);
     }
 }

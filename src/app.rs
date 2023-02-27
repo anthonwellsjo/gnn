@@ -3,7 +3,7 @@ pub mod bash_driver;
 mod misc;
 use auth::token_is_valid;
 
-use crate::db::{self, Notification};
+use crate::{db::{self, Notification}, models::Thread};
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
@@ -164,7 +164,8 @@ impl Session {
         println!("{:?}", nots);
         match nots {
             Ok(nots) => {
-                open::that(nots.unwrap().first().unwrap().url.as_ref().unwrap()).unwrap();
+                Notification::fetch_url::<Thread>(self, nots.unwrap().first().unwrap().url.as_ref().unwrap()).await;
+                // open::that(nots.unwrap().first().unwrap().url.as_ref().unwrap()).unwrap();
             }
             Err(err) => self.action_responses.push(ActionResponse {
                 message: "Error: ".to_owned() + &err.to_string(),
