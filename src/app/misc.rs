@@ -1,36 +1,8 @@
-use crate::models::User;
+use serde::Deserialize;
+
+use crate::models::{Notification};
 
 use super::{ActionResponse, ContentType, Session};
-
-pub async fn get_user(session: &mut Session) -> Option<User> {
-    let access_token = &session.token;
-
-    let client = reqwest::Client::builder()
-        .user_agent("curl")
-        .build()
-        .unwrap();
-
-    let res = client
-        .get("https://api.github.com/user")
-        .header("Accept", "application/json")
-        .bearer_auth(&access_token)
-        .send()
-        .await;
-
-    let res: Option<User> = match res {
-        Ok(res) => Some(res.json::<User>().await.unwrap()),
-        Err(_) => {
-            session.action_responses.push(ActionResponse {
-                message: "Error while getting user...".to_owned(),
-                res_type: super::ActionResponseType::Error,
-                content_type: None,
-                notifications: None,
-            });
-            None
-        }
-    };
-    res
-}
 
 impl Notification {
     pub async fn get_many(session: &mut Session, no: Option<String>) -> Vec<Notification> {
@@ -124,3 +96,41 @@ impl Notification {
         println!("{:?}", res);
     }
 }
+
+
+
+
+pub struct Http{}
+
+impl Http{
+    pub async fn get<T: for<'de> Deserialize<'de>>(session: &mut Session, url: &str) -> Option<T> {
+        let access_token = &session.token;
+
+        let client = reqwest::Client::builder()
+            .user_agent("curl")
+            .build()
+            .unwrap();
+
+        let res = client
+            .get(url)
+            .header("Accept", "application/json")
+            .bearer_auth(&access_token)
+            .send()
+            .await
+            .unwrap();
+
+        match res.status() {
+            reqwest::StatusCode::OK => {
+                match res.json::<T>().await {
+                    Ok(user) => {return Some(user)},
+                    Err(err) => {panic!("{}", err)},
+                };
+            }
+            other => {
+                session.action_responses.push(ActionResponse { message: other.to_string(), res_type: super::ActionResponseType::Error, content_type: None, notifications: None });
+                return None;
+            },
+        };
+    }
+}
+

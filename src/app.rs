@@ -2,8 +2,9 @@ pub mod auth;
 pub mod bash_driver;
 mod misc;
 use auth::token_is_valid;
+use arw_brr::verify_argument_type;
 
-use crate::{db::{self, Notification}, models::Thread};
+use crate::{db::{self}, models::{Thread, Notification, User}, app::misc::Http};
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
@@ -126,9 +127,9 @@ impl Session {
 
     async fn init(&mut self) {
         print!("init");
-        match misc::get_user(self).await {
+        match Http::get::<User>(self, "https://api.github.com/user").await {
             Some(user) => {
-                db::User::save(&user);
+                User::save(&user);
                 self.action_responses.push(ActionResponse {
                     message: "User set successfully.".to_owned(),
                     res_type: ActionResponseType::Success,
@@ -146,8 +147,15 @@ impl Session {
     }
 
     async fn get_notifications(&mut self, no: Option<String>) {
-        let notifications = Notification::get_many(self, no).await;
-        Notification::save_many(self, notifications).await;
+        let no = verify_argument_type::<u8>(no, 20);
+        // let notifications = Notification::get_many(self, no).await;
+        let notifications = Http::get::<Vec<Notification>>(self, &("https://api.github.com/notifications?all=true&per_page=".to_owned()+&no.to_string())).await;
+        match notifications {
+            Some(nots) => {
+                Notification::save_many(self, nots).await;
+            }
+            None => todo!(),
+        }
     }
 
     fn show_version(&mut self) {
@@ -160,11 +168,11 @@ impl Session {
     }
 
     async fn goto_notification(&mut self, argument: String) {
-        let nots = db::Notification::get_by_id(argument);
+        let nots = Notification::get_by_id(argument);
         println!("{:?}", nots);
         match nots {
             Ok(nots) => {
-                Notification::fetch_url::<Thread>(self, nots.unwrap().first().unwrap().url.as_ref().unwrap()).await;
+                Notification::fetch_url::<Thread>(self, &nots.unwrap().first().unwrap().url).await;
                 // open::that(nots.unwrap().first().unwrap().url.as_ref().unwrap()).unwrap();
             }
             Err(err) => self.action_responses.push(ActionResponse {

@@ -2,7 +2,8 @@ use arw_brr::get_app_path;
 use rusqlite::{Connection, Result};
 use serde::Deserialize;
 
-use crate::models::{Repository, Notification, User};
+use crate::models::{Notification, LocalNotification, User};
+
 
 #[derive(Deserialize, Debug)]
 pub struct AuthRequest {
@@ -149,7 +150,7 @@ impl Notification {
         conn.execute(
             "INSERT INTO notification (gh_id, short_id, url) values (?1, ?2, ?3)",
             &[
-                &notification.gh_id.as_ref().unwrap(),
+                &notification.id,
                 &Notification::get_short_id(&notification.id),
                 &notification.url,
             ])?;
@@ -191,7 +192,7 @@ impl Notification {
         Ok(())
     }
 
-    pub fn get_by_id(id: String) -> Result<Option<Vec<Notification>>> {
+    pub fn get_by_id(id: String) -> Result<Option<Vec<LocalNotification>>> {
         let conn = Connection::open(get_app_path("gnn"))?;
 
         let mut stmt = conn.prepare(
@@ -205,21 +206,13 @@ impl Notification {
         )?;
 
         let notifications = stmt.query_map([], |row| {
-            Ok(Notification {
-                gh_id: None,
+            Ok(LocalNotification {
                 short_id: row.get(0)?,
                 url: row.get(1)?,
-                subscription_url: None,
-                reason: None,
-                updated_at: None,
-                subject: None,
-                unread: None,
-                repository: None,
-                last_read_at: None,
             })
         })?;
 
-        let mut nots: Vec<Notification> = Vec::new();
+        let mut nots: Vec<LocalNotification> = Vec::new();
 
         for not in notifications {
             let not = match not {

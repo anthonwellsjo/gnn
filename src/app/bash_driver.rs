@@ -37,7 +37,7 @@ fn show_notifications(not: &Option<Vec<Notification>>) {
             get_unread_icon(no.unread),
             format_text(
                 &3,
-                &Notification::get_short_id(no.gh_id.as_ref().unwrap()),
+                &Notification::get_short_id(&no.id),
                 true
             ),
             format_text(
