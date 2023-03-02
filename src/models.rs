@@ -1,4 +1,6 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+
+use crate::app::{misc::Http, ActionResponse, ActionResponseContent, Session};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -83,6 +85,23 @@ pub struct Plan {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct Thread {
+    pub id: String,
+    pub repository: Repository,
+    pub subject: Subject,
+    pub reason: String,
+    pub unread: bool,
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
+    #[serde(rename = "last_read_at")]
+    pub last_read_at: Option<String>,
+    pub url: String,
+    #[serde(rename = "subscription_url")]
+    pub subscription_url: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Notification {
     pub id: String,
     pub repository: Repository,
@@ -91,14 +110,14 @@ pub struct Notification {
     pub unread: bool,
     #[serde(rename = "updated_at")]
     pub updated_at: String,
-    // #[serde(rename = "last_read_at")]
-    // pub last_read_at: String,
+    #[serde(rename = "last_read_at")]
+    pub last_read_at: Option<String>,
     pub url: String,
     // #[serde(rename = "subscription_url")]
     // pub subscription_url: String,
 }
 
-impl Notification{
+impl Notification {
     pub fn get_short_id(id: &str) -> String {
         let len = id.len();
         id[len - 3..].to_owned()
@@ -108,8 +127,27 @@ impl Notification{
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalNotification {
-    pub short_id: Option<String>,
+    pub gh_id: String,
+    pub short_id: String,
+    pub repo_name: String,
+    pub subject_type: String,
+    pub subject_title: String,
     pub url: String,
+}
+
+impl LocalNotification {
+    pub async fn get_thread(&self, session: &mut Session) -> Result<Thread, String> {
+        let thread = Http::get::<Thread>(
+            session,
+            &("https://api.github.com/notifications/threads/".to_owned() + &self.gh_id.to_string()),
+        )
+        .await;
+
+        match thread {
+            Some(t) => Ok(t),
+            None => Err("No thread found.".to_owned()),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -253,21 +291,4 @@ pub struct Subject {
     // pub latest_comment_url: String,
     #[serde(rename = "type")]
     pub type_field: String,
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Thread {
-    pub id: String,
-    pub repository: Repository,
-    pub subject: Subject,
-    pub reason: String,
-    pub unread: bool,
-    // #[serde(rename = "updated_at")]
-    // pub updated_at: String,
-    // #[serde(rename = "last_read_at")]
-    // pub last_read_at: String,
-    // pub url: String,
-    // #[serde(rename = "subscription_url")]
-    // pub subscription_url: String,
 }

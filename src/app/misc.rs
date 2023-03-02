@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
-use crate::models::{Notification};
+use crate::models::Notification;
 
-use super::{ActionResponse, ContentType, Session};
+use super::{ActionResponse,  Session};
 
 impl Notification {
     pub async fn get_many(session: &mut Session, no: Option<String>) -> Vec<Notification> {
@@ -12,8 +12,7 @@ impl Notification {
                 session.action_responses.push(ActionResponse {
                     message: "Argument wasn't a valid u8".to_owned(),
                     res_type: super::ActionResponseType::Error,
-                    content_type: None,
-                    notifications: None,
+                    content: None
                 });
                 20
             }
@@ -41,8 +40,7 @@ impl Notification {
                 session.action_responses.push(ActionResponse {
                     message: "Error while getting user...".to_owned(),
                     res_type: super::ActionResponseType::Error,
-                    content_type: None,
-                    notifications: None,
+                    content: None
                 });
                 None
             }
@@ -53,8 +51,7 @@ impl Notification {
                 session.action_responses.push(ActionResponse {
                     message: "Received notifications".to_owned(),
                     res_type: super::ActionResponseType::Content,
-                    content_type: Some(ContentType::Notification),
-                    notifications: Some(vec.clone()),
+                    content: Some(super::ActionResponseContent { notifications: Some(vec.clone()), thread: None })
                 });
                 return vec;
             }
@@ -86,8 +83,7 @@ impl Notification {
                 session.action_responses.push(ActionResponse {
                     message: "Error while getting user...".to_owned(),
                     res_type: super::ActionResponseType::Error,
-                    content_type: None,
-                    notifications: None,
+                    content: None
                 });
                 None
             }
@@ -97,12 +93,9 @@ impl Notification {
     }
 }
 
+pub struct Http {}
 
-
-
-pub struct Http{}
-
-impl Http{
+impl Http {
     pub async fn get<T: for<'de> Deserialize<'de>>(session: &mut Session, url: &str) -> Option<T> {
         let access_token = &session.token;
 
@@ -122,15 +115,20 @@ impl Http{
         match res.status() {
             reqwest::StatusCode::OK => {
                 match res.json::<T>().await {
-                    Ok(user) => {return Some(user)},
-                    Err(err) => {panic!("{}", err)},
+                    Ok(user) => return Some(user),
+                    Err(err) => {
+                        panic!("{}", err)
+                    }
                 };
             }
             other => {
-                session.action_responses.push(ActionResponse { message: other.to_string(), res_type: super::ActionResponseType::Error, content_type: None, notifications: None });
+                session.action_responses.push(ActionResponse {
+                    message: other.to_string(),
+                    res_type: super::ActionResponseType::Error,
+                    content: None
+                });
                 return None;
-            },
+            }
         };
     }
 }
-

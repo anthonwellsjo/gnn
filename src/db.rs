@@ -122,37 +122,22 @@ impl User {
     }
 }
 
-pub fn get_notification_reason(s: &str) -> String {
-    match s{
-            "assign" => "You were assigned to the issue.".to_owned(),
-            "author" => "You created the thread.".to_owned(),
-            "comment" => "You commented on the thread.".to_owned(),
-            "ci_activity" => "A GitHub Actions workflow run that you triggered was completed.".to_owned(), 
-            "invitation" => "You accepted an invitation to contribute to the repository.".to_owned(),
-            "manual" => "You subscribed to the thread (via an issue or pull request).".to_owned(),
-            "mention" => "You were specifically @mentioned in the content.".to_owned(),
-            "review_requested" => "You, or a team you're a member of, were requested to review a pull request.".to_owned(),
-            "security_alert" => "GitHub discovered a security vulnerability in your repository.".to_owned(),
-            "state_change" => "You changed the thread state (for example, closing an issue or merging a pull request).".to_owned(),
-            "subscribed" => "You're watching the repository.".to_owned(),
-            "team_mention" => "You were on a team that was mentioned.".to_owned(),
-            &_ => "Unregistered reason".to_owned()
-        }
-}
-
-impl Notification {
-    pub async fn save(notification: &Self) -> Result<()> {
+impl LocalNotification {
+    pub async fn save(notification: &Notification) -> Result<()> {
         println!("save notification {:?}", notification);
 
         let conn = Self::get_db_connection()?;
 
         println!("execute");
         conn.execute(
-            "INSERT INTO notification (gh_id, short_id, url) values (?1, ?2, ?3)",
+            "INSERT INTO notification (gh_id, short_id, repo_name, subject_type, subject_title, url) values (?1, ?2, ?3, ?4, ?5, ?6)",
             &[
-                &notification.id,
-                &Notification::get_short_id(&notification.id),
-                &notification.url,
+               &notification.id,
+               &Notification::get_short_id(&notification.id),
+               &notification.repository.name,
+               &notification.subject.type_field,
+               &notification.subject.title,
+               &notification.url,
             ])?;
 
         conn.close()
@@ -162,8 +147,8 @@ impl Notification {
     }
 
     pub async fn save_many(_arg: &mut crate::app::Session, notifications: Vec<Notification>) {
-        for no in notifications {
-            Self::save(&no).await.expect("Couldn't save notification");
+        for not in notifications {
+            Self::save(&not).await.expect("Couldn't save notification");
         }
     }
 
@@ -171,12 +156,14 @@ impl Notification {
         println!("get conn");
         let conn = Connection::open(get_app_path("gnn"))?;
         println!("got conn");
-
         conn.execute(
             "CREATE TABLE IF NOT EXISTS notification (
             id INTEGER PRIMARY KEY,
             gh_id TEXT NOT NULL,
             short_id TEXT NOT NULL,
+            repo_name TEXT NOT NULL,
+            subject_type TEXT NOT NULL,
+            subject_title TEXT NOT NULL,
             url TEXT NOT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
          )",
@@ -192,11 +179,11 @@ impl Notification {
         Ok(())
     }
 
-    pub fn get_by_id(id: String) -> Result<Option<Vec<LocalNotification>>> {
+    pub fn get_by_id(id: String) -> Result<LocalNotification> {
         let conn = Connection::open(get_app_path("gnn"))?;
 
         let mut stmt = conn.prepare(
-            &("SELECT short_id, url
+            &("SELECT gh_id, short_id, repo_name, subject_type, subject_title, url
             FROM notification 
             WHERE short_id="
                .to_owned()
@@ -207,8 +194,12 @@ impl Notification {
 
         let notifications = stmt.query_map([], |row| {
             Ok(LocalNotification {
-                short_id: row.get(0)?,
-                url: row.get(1)?,
+                gh_id: row.get(0)?,
+                short_id: row.get(1)?,
+                repo_name: row.get(2)?,
+                subject_type: row.get(3)?,
+                subject_title: row.get(4)?,
+                url: row.get(5)?,
             })
         })?;
 
@@ -222,6 +213,6 @@ impl Notification {
             nots.push(not);
         }
 
-        Ok(Some(nots))
+        Ok(nots.first().unwrap().to_owned())
     }
 }
