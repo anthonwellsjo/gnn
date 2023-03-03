@@ -115,7 +115,7 @@ impl Http {
         match res.status() {
             reqwest::StatusCode::OK => {
                 match res.json::<T>().await {
-                    Ok(user) => return Some(user),
+                    Ok(obj) => return Some(obj),
                     Err(err) => {
                         panic!("{}", err)
                     }

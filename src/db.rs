@@ -133,7 +133,7 @@ impl LocalNotification {
             "INSERT INTO notification (gh_id, short_id, repo_name, subject_type, subject_title, url) values (?1, ?2, ?3, ?4, ?5, ?6)",
             &[
                &notification.id,
-               &Notification::get_short_id(&notification.id),
+               &notification.get_short_id(),
                &notification.repository.name,
                &notification.subject.type_field,
                &notification.subject.title,

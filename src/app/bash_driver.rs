@@ -1,9 +1,10 @@
 use chrono::DateTime;
+use colored::{ColoredString, Colorize};
 use std::cmp::Ordering;
 
 use crate::{
     app::{ActionResponse, ActionResponseType},
-    models::{Notification, Thread},
+    models::{Notification, Thread },
 };
 
 pub fn display_action_response(res: &ActionResponse) {
@@ -16,47 +17,75 @@ pub fn display_action_response(res: &ActionResponse) {
     if res.res_type == ActionResponseType::Content {
         let content = res.content.as_ref().unwrap();
 
-        if content.notifications.is_some(){
+        if content.notifications.is_some() {
             show_notifications(&content.notifications.as_ref().unwrap());
         }
 
-        if content.thread.is_some(){
+        if content.thread.is_some() {
             show_thread(&content.thread.as_ref().unwrap());
         }
     }
 }
 
 fn show_thread(t: &Thread) {
-    println!("Reason: {:?}", get_notification_reason(&t.reason));
-    println!("Repo name: {:?}", &t.repository.name);
-    println!("Owner: {:?}", &t.repository.owner.login);
+    let updated = DateTime::parse_from_rfc3339(&t.updated_at).unwrap();
+
+    println!("--------------{}-------------", &t.subject.type_field);
+    println!("{}", &t.subject.title.yellow());
+    println!("Repo: {}", &t.repository.name);
+    println!("Date: {}", updated.format("%d/%m %H:%M"));
+    println!("Owner: {}", &t.repository.owner.login);
+    println!("Notified because: {}", get_notification_reason(&t.reason));
 }
 
 fn show_notifications(not: &Vec<Notification>) {
+    let one_line = false;
 
-    println!(
-        "  {} {} {} | {} | {} | {}",
-        "",
-        format_text(&3, &"id".to_owned(), true),
-        format_text(&8, &" repo".to_owned(), false),
-        format_text(&10, &"  type".to_owned(), false),
-        format_text(&25, &"  subject".to_owned(), false),
-        "  "
-    );
-    println!("--------------------------------------------------------------------");
-
-    for no in not.into_iter() {
+    for no in not.into_iter().rev() {
         let date = DateTime::parse_from_rfc3339(&no.updated_at).unwrap();
-        println!(
-            "{}  {} {} | {} | {} | {} {}",
-            get_unread_icon(no.unread),
-            format_text(&3, &Notification::get_short_id(&no.id), true),
-            format_text(&8, &no.repository.name, false),
-            format_text(&10, &no.subject.type_field, false),
-            format_text(&25, &no.subject.title, false),
-            date.format("%d/%m %H:%M"),
-            format_text(&3, &get_notification_reason_icon(&no.reason), true),
-        );
+        let last_seen = match &no.last_read_at {
+            Some(date) => DateTime::parse_from_rfc3339(&date)
+                .unwrap()
+                .format("%d/%m %H:%M")
+                .to_string(),
+            None => "Not seen".to_string(),
+        };
+
+        if !one_line {
+            println!();
+            println!("{}", seen_color("#".to_owned() +&no.get_short_id() + " " + &no.subject.title, no.unread));
+            println!("{}",  &no.subject.type_field.bold());
+            println!("Repo: {}", &no.repository.name);
+            println!("Date: {}", date.format("%d/%m %H:%M"));
+            println!("Repo owner: {}", &no.repository.owner.login);
+            println!(
+                "Notified because {}",
+                get_notification_reason(&no.reason).to_lowercase()
+            );
+            if !no.unread {
+                println!("Last seen on {}", &last_seen);
+            }
+        } else {
+            println!(
+                "{}{}{}{}{}",
+                seen_color(
+                    format_text(&3, &no.get_short_id(), true),
+                    no.unread
+                ),
+                format_text(&8, &no.repository.name, false),
+                format_text(&10, &no.subject.type_field, false),
+                format_text(&25, &no.subject.title, false),
+                date.format("%d/%m"),
+            );
+        }
+    }
+}
+
+fn seen_color(str: String, unread: bool) -> ColoredString {
+    if unread {
+        str.yellow()
+    } else {
+        str.green()
     }
 }
 
@@ -138,4 +167,3 @@ pub fn get_notification_reason(s: &str) -> String {
             &_ => "Unregistered reason".to_owned()
         }
 }
-

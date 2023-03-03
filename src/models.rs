@@ -118,9 +118,9 @@ pub struct Notification {
 }
 
 impl Notification {
-    pub fn get_short_id(id: &str) -> String {
-        let len = id.len();
-        id[len - 3..].to_owned()
+    pub fn get_short_id(&self) -> String {
+        let len = self.id.len();
+        self.id[len - 3..].to_owned()
     }
 }
 

@@ -24,6 +24,7 @@ arw_brr = {path="../arw_brr", version = "0.1.5"}
 open = "3.2.0"
 arboard = "3.2.0"
 chrono = "0.4.23"
+colored = "2.0.0"
 
 [dev-dependencies]
 rand = "0.8.5"
