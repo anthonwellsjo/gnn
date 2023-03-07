@@ -51,7 +51,7 @@ impl Notification {
                 session.action_responses.push(ActionResponse {
                     message: "Received notifications".to_owned(),
                     res_type: super::ActionResponseType::Content,
-                    content: Some(super::ActionResponseContent { notifications: Some(vec.clone()), thread: None })
+                    content: Some(super::ActionResponseContent { notifications: Some(vec.clone()), d_not: None })
                 });
                 return vec;
             }

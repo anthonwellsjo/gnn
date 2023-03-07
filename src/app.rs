@@ -7,7 +7,7 @@ use auth::token_is_valid;
 use crate::{
     app::misc::Http,
     db::{self},
-    models::{LocalNotification, Notification, Thread, User},
+    models::{LocalNotification, Notification, Thread, User, DetailedNotification},
 };
 
 #[derive(Debug, PartialEq)]
@@ -43,7 +43,7 @@ pub struct ActionResponse {
 #[derive(Debug)]
 pub struct ActionResponseContent {
     pub notifications: Option<Vec<Notification>>,
-    pub thread: Option<Thread>,
+    pub d_not: Option<DetailedNotification>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -153,6 +153,7 @@ impl Session {
                 + &no.to_string()),
         )
         .await;
+
         match notifications {
             Some(nots) => {
                 LocalNotification::save_many(self, nots.clone()).await;
@@ -161,7 +162,7 @@ impl Session {
                     res_type: ActionResponseType::Content,
                     content: Some(ActionResponseContent {
                         notifications: Some(nots),
-                        thread: None,
+                        d_not: None,
                     }),
                 })
             }
@@ -196,12 +197,12 @@ impl Session {
     async fn inspect_notification(&mut self, argument: String) {
         let not = LocalNotification::get_by_id(argument).unwrap();
 
-        match not.get_thread(self).await {
+        match not.get_detailed(self).await {
             Ok(t) => self.action_responses.push(ActionResponse {
                 message: "".to_owned(),
                 res_type: crate::app::ActionResponseType::Content,
                 content: Some(ActionResponseContent {
-                    thread: Some(t),
+                    d_not: Some(t),
                     notifications: None,
                 }),
             }),

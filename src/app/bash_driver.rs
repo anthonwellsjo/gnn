@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 use crate::{
     app::{ActionResponse, ActionResponseType},
-    models::{Notification, Thread },
+    models::{Notification, Thread, DetailedNotification },
 };
 
 pub fn display_action_response(res: &ActionResponse) {
@@ -21,21 +21,21 @@ pub fn display_action_response(res: &ActionResponse) {
             show_notifications(&content.notifications.as_ref().unwrap());
         }
 
-        if content.thread.is_some() {
-            show_thread(&content.thread.as_ref().unwrap());
+        if content.d_not.is_some() {
+            show_thread(&content.d_not.as_ref().unwrap());
         }
     }
 }
 
-fn show_thread(t: &Thread) {
-    let updated = DateTime::parse_from_rfc3339(&t.updated_at).unwrap();
+fn show_thread(t: &DetailedNotification) {
+    let updated = DateTime::parse_from_rfc3339(&t.thread.updated_at).unwrap();
 
-    println!("--------------{}-------------", &t.subject.type_field);
-    println!("{}", &t.subject.title.yellow());
-    println!("Repo: {}", &t.repository.name);
+    println!("--------------{}-------------", &t.thread.subject.type_field);
+    println!("{}", &t.thread.subject.title.yellow());
+    println!("Repo: {}", &t.thread.repository.name);
     println!("Date: {}", updated.format("%d/%m %H:%M"));
-    println!("Owner: {}", &t.repository.owner.login);
-    println!("Notified because: {}", get_notification_reason(&t.reason));
+    println!("Owner: {}", &t.thread.repository.owner.login);
+    println!("Notified because: {}", get_notification_reason(&t.thread.reason));
 }
 
 fn show_notifications(not: &Vec<Notification>) {

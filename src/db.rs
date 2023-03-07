@@ -81,13 +81,13 @@ impl Auth {
 
 impl User {
     pub fn save(user: &Self) -> Result<()> {
-        println!("save token");
+        println!("save user");
 
         let conn = Self::get_db_connection()?;
 
         conn.execute(
             "INSERT INTO users (name, login, avatar_url, html_url, subscriptions_url, organizations_url, repos_url, events_url, received_events_url) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            &[&user.name, &user.login, &user.avatar_url, &user.html_url, &user.subscriptions_url, &user.organizations_url, &user.repos_url, &user.events_url, &user.received_events_url],
+            &[&user.name.as_ref().unwrap(), &user.login, &user.avatar_url, &user.html_url, &user.subscriptions_url, &user.organizations_url, &user.repos_url, &user.events_url, &user.received_events_url],
         )?;
 
         conn.close()
@@ -130,7 +130,7 @@ impl LocalNotification {
 
         println!("execute");
         conn.execute(
-            "INSERT INTO notification (gh_id, short_id, repo_name, subject_type, subject_title, url) values (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO notification (gh_id, short_id, repo_name, subject_type, subject_title, url, latest_comment_url) values (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             &[
                &notification.id,
                &notification.get_short_id(),
@@ -138,6 +138,7 @@ impl LocalNotification {
                &notification.subject.type_field,
                &notification.subject.title,
                &notification.url,
+               &notification.subject.latest_comment_url.as_ref().unwrap_or(&"null".to_owned())
             ])?;
 
         conn.close()
@@ -165,6 +166,7 @@ impl LocalNotification {
             subject_type TEXT NOT NULL,
             subject_title TEXT NOT NULL,
             url TEXT NOT NULL,
+            latest_comment_url TEXT NOT NULL,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
          )",
             [],
@@ -183,7 +185,7 @@ impl LocalNotification {
         let conn = Connection::open(get_app_path("gnn"))?;
 
         let mut stmt = conn.prepare(
-            &("SELECT gh_id, short_id, repo_name, subject_type, subject_title, url
+            &("SELECT gh_id, short_id, repo_name, subject_type, subject_title, url, latest_comment_url
             FROM notification 
             WHERE short_id="
                .to_owned()
@@ -200,6 +202,7 @@ impl LocalNotification {
                 subject_type: row.get(3)?,
                 subject_title: row.get(4)?,
                 url: row.get(5)?,
+                latest_comment_url: row.get(6)?,
             })
         })?;
 

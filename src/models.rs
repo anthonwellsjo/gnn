@@ -40,7 +40,7 @@ pub struct User {
     // pub type_field: String,
     // #[serde(rename = "site_admin")]
     // pub site_admin: bool,
-    pub name: String,
+    pub name: Option<String>,
     // pub company: String,
     // pub blog: String,
     // pub location: String,
@@ -81,6 +81,25 @@ pub struct Plan {
     #[serde(rename = "private_repos")]
     pub private_repos: i64,
     pub collaborators: i64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PR {
+    #[serde(rename = "_links")]
+    pub links: Links,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Links {
+    pub comments: Href,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Href {
+    pub href: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -133,20 +152,35 @@ pub struct LocalNotification {
     pub subject_type: String,
     pub subject_title: String,
     pub url: String,
+    pub latest_comment_url: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DetailedNotification {
+    pub short_id: String,
+    pub thread: Thread,
+    pub comment: Comment,
 }
 
 impl LocalNotification {
-    pub async fn get_thread(&self, session: &mut Session) -> Result<Thread, String> {
-        let thread = Http::get::<Thread>(
-            session,
-            &("https://api.github.com/notifications/threads/".to_owned() + &self.gh_id.to_string()),
-        )
-        .await;
+    pub async fn get_detailed(
+        &self,
+        session: &mut Session,
+    ) -> Result<DetailedNotification, String> {
+        let thread = Http::get::<Thread>(session, &(self.url))
+            .await
+            .unwrap();
 
-        match thread {
-            Some(t) => Ok(t),
-            None => Err("No thread found.".to_owned()),
-        }
+        let comment = Http::get::<Comment>(session, &self.latest_comment_url)
+            .await
+            .unwrap();
+
+        Ok(DetailedNotification {
+            short_id: self.short_id.clone(),
+            thread,
+            comment,
+        })
     }
 }
 
@@ -286,9 +320,51 @@ pub struct Owner {
 #[serde(rename_all = "camelCase")]
 pub struct Subject {
     pub title: String,
-    // pub url: String,
-    // #[serde(rename = "latest_comment_url")]
-    // pub latest_comment_url: String,
+    pub url: String,
+    #[serde(rename = "latest_comment_url")]
+    pub latest_comment_url: Option<String>,
     #[serde(rename = "type")]
     pub type_field: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Comment {
+    pub url: String,
+    #[serde(rename = "html_url")]
+    pub html_url: String,
+    #[serde(rename = "issue_url")]
+    pub issue_url: String,
+    pub id: i64,
+    #[serde(rename = "node_id")]
+    pub node_id: String,
+    pub user: User,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
+    #[serde(rename = "author_association")]
+    pub author_association: String,
+    pub body: String,
+    pub reactions: Reactions,
+    // #[serde(rename = "performed_via_github_app")]
+    // pub performed_via_github_app: Value,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Reactions {
+    pub url: String,
+    #[serde(rename = "total_count")]
+    pub total_count: i64,
+    #[serde(rename = "+1")]
+    pub n1: i64,
+    #[serde(rename = "-1")]
+    pub n12: i64,
+    pub laugh: i64,
+    pub hooray: i64,
+    pub confused: i64,
+    pub heart: i64,
+    pub rocket: i64,
+    pub eyes: i64,
 }
